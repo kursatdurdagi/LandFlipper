@@ -1,0 +1,25 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="../Styles/Common.uss" />
+    <ui:VisualElement name="pause-overlay" class="screen pause-overlay hidden">
+        <ui:VisualElement class="menu-card pause-card">
+            <ui:Label text="Duraklatıldı" class="title small-title" />
+
+            <ui:VisualElement class="info-box">
+                <ui:Label name="mode-label" class="info-mode" />
+                <ui:Label name="info-label" class="info-text" />
+            </ui:VisualElement>
+
+            <ui:VisualElement name="menu-panel" class="panel">
+                <ui:Button name="resume-button" text="Devam Et" class="lf-button primary" />
+                <ui:Button name="leave-button" text="Ana Menüye Dön" class="lf-button" />
+                <ui:Button name="quit-button" text="Masaüstüne Çık" class="lf-button subtle" />
+            </ui:VisualElement>
+
+            <ui:VisualElement name="confirm-panel" class="panel hidden">
+                <ui:Label name="confirm-label" class="body-text" />
+                <ui:Button name="confirm-yes-button" text="Oturumu Kapat" class="lf-button danger" />
+                <ui:Button name="confirm-no-button" text="Vazgeç" class="lf-button subtle" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

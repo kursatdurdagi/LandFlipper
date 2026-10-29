@@ -1,0 +1,249 @@
+/* Land Flipper - ortak UI Toolkit stilleri (cozy, sıcak palet) */
+:root {
+    --lf-bg: #2F3A2C;
+    --lf-card: #F4EBD9;
+    --lf-card-2: #EBDFC6;
+    --lf-ink: #3B2F25;
+    --lf-muted: #7A6A58;
+    --lf-line: #D9CBB0;
+    --lf-accent: #5E8C4A;
+    --lf-accent-hover: #6FA157;
+    --lf-accent-ink: #FFFDF6;
+    --lf-neutral: #E8DCC3;
+    --lf-neutral-hover: #DFCFB0;
+    --lf-danger: #B5533C;
+    --lf-danger-hover: #C4644C;
+}
+
+.screen {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+.hidden {
+    display: none;
+}
+
+/* ---------- Kart / başlıklar ---------- */
+.menu-card {
+    width: 460px;
+    padding: 40px 40px 32px 40px;
+    background-color: var(--lf-card);
+    border-radius: 18px;
+    border-width: 2px;
+    border-color: var(--lf-line);
+}
+
+.title {
+    font-size: 56px;
+    -unity-font-style: bold;
+    color: var(--lf-ink);
+    -unity-text-align: middle-center;
+}
+
+.title.small-title {
+    font-size: 38px;
+    margin-bottom: 16px;
+}
+
+.subtitle {
+    font-size: 18px;
+    color: var(--lf-muted);
+    -unity-text-align: middle-center;
+    margin-bottom: 28px;
+}
+
+.section-title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: var(--lf-muted);
+    margin: 14px 0 4px 2px;
+}
+
+.body-text {
+    font-size: 18px;
+    color: var(--lf-ink);
+    white-space: normal;
+    -unity-text-align: middle-center;
+    margin: 12px 0;
+}
+
+.panel {
+    flex-direction: column;
+}
+
+.divider {
+    height: 2px;
+    background-color: var(--lf-line);
+    margin: 14px 0 2px 0;
+}
+
+/* ---------- Butonlar ---------- */
+.lf-button {
+    height: 52px;
+    margin: 6px 0;
+    font-size: 20px;
+    -unity-font-style: bold;
+    border-radius: 12px;
+    border-width: 0;
+    background-color: var(--lf-neutral);
+    color: var(--lf-ink);
+    transition-duration: 0.12s;
+}
+
+.lf-button:hover {
+    background-color: var(--lf-neutral-hover);
+    scale: 1.02 1.02;
+}
+
+.lf-button:active {
+    scale: 0.98 0.98;
+}
+
+.lf-button:disabled {
+    opacity: 0.5;
+}
+
+.lf-button.primary {
+    background-color: var(--lf-accent);
+    color: var(--lf-accent-ink);
+}
+
+.lf-button.primary:hover {
+    background-color: var(--lf-accent-hover);
+}
+
+.lf-button.danger {
+    background-color: var(--lf-danger);
+    color: var(--lf-accent-ink);
+}
+
+.lf-button.danger:hover {
+    background-color: var(--lf-danger-hover);
+}
+
+.lf-button.subtle {
+    background-color: rgba(0, 0, 0, 0);
+    color: var(--lf-muted);
+}
+
+.lf-button.subtle:hover {
+    background-color: var(--lf-card-2);
+}
+
+/* ---------- Metin alanları ---------- */
+.lf-field {
+    margin: 4px 0;
+}
+
+.lf-field > Label {
+    min-width: 70px;
+    font-size: 16px;
+    color: var(--lf-ink);
+    -unity-text-align: middle-left;
+}
+
+.lf-field #unity-text-input {
+    height: 38px;
+    font-size: 18px;
+    border-radius: 8px;
+    border-color: var(--lf-line);
+    background-color: #FFFDF6;
+    color: var(--lf-ink);
+    padding-left: 10px;
+}
+
+/* ---------- Durum ---------- */
+.status {
+    margin-top: 14px;
+    font-size: 15px;
+    color: var(--lf-muted);
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+.status.error {
+    color: var(--lf-danger);
+}
+
+.version {
+    position: absolute;
+    right: 16px;
+    bottom: 12px;
+    font-size: 13px;
+    color: rgba(244, 235, 217, 0.5);
+}
+
+/* ---------- Ana menü ---------- */
+/* Arka planda 3D diorama var; kart sola hizalı ve yarı saydam bir gölge üzerinde. */
+.main-menu {
+    background-color: rgba(0, 0, 0, 0);
+    align-items: flex-start;
+    padding-left: 110px;
+}
+
+.menu-shade {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 720px;
+    background-color: rgba(24, 30, 20, 0.35);
+}
+
+.main-menu .menu-card {
+    background-color: rgba(244, 235, 217, 0.95);
+}
+
+/* ---------- Oyun menüsü ---------- */
+.pause-overlay {
+    background-color: rgba(20, 26, 18, 0.6);
+}
+
+.pause-card {
+    width: 420px;
+}
+
+.info-box {
+    background-color: var(--lf-card-2);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+}
+
+.info-mode {
+    font-size: 18px;
+    -unity-font-style: bold;
+    color: var(--lf-ink);
+}
+
+.info-text {
+    font-size: 15px;
+    color: var(--lf-muted);
+    white-space: normal;
+    margin-top: 4px;
+}
+
+/* ---------- HUD ---------- */
+.hud-hint {
+    position: absolute;
+    left: 24px;
+    bottom: 20px;
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.crosshair {
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-width: 1px;
+    border-color: rgba(0, 0, 0, 0.45);
+}

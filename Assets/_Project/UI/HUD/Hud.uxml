@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="../Styles/Common.uss" />
+    <ui:VisualElement name="hud-root" class="screen" picking-mode="Ignore">
+        <ui:VisualElement name="crosshair" class="crosshair" picking-mode="Ignore" />
+        <ui:Label name="hint-label" text="WASD: Yürü · Shift: Koş · Space: Zıpla · V: Görünüm · Esc: Menü" class="hud-hint" picking-mode="Ignore" />
+    </ui:VisualElement>
+</ui:UXML>
