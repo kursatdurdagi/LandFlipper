@@ -16,6 +16,6 @@ MonoBehaviour:
   displayName: Tahta
   sellPrice: 8
   slotCost: 1
-  stackHeight: 0.1
-  carryEuler: {x: 0, y: 90, z: 0}
+  stackHeight: 0.085
+  carryEuler: {x: 0, y: 0, z: 0}
   prefab: {fileID: 8638130355524819575, guid: aff862ecbed4ac24f8218598b5a215c6, type: 3}

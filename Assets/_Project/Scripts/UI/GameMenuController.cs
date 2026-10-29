@@ -21,7 +21,7 @@ namespace LandFlipper.UI
 
         VisualElement overlay, menuPanel, confirmPanel;
         Label modeLabel, infoLabel, confirmLabel;
-        Button resumeButton, leaveButton, quitButton, confirmYesButton, confirmNoButton;
+        Button resumeButton, settingsButton, leaveButton, quitButton, confirmYesButton, confirmNoButton;
         InputAction pauseAction;
         IVisualElementScheduledItem refreshJob;
         PendingAction pendingAction;
@@ -40,21 +40,22 @@ namespace LandFlipper.UI
             infoLabel = root.Q<Label>("info-label");
             confirmLabel = root.Q<Label>("confirm-label");
             resumeButton = root.Q<Button>("resume-button");
+            settingsButton = root.Q<Button>("settings-button");
             leaveButton = root.Q<Button>("leave-button");
             quitButton = root.Q<Button>("quit-button");
             confirmYesButton = root.Q<Button>("confirm-yes-button");
             confirmNoButton = root.Q<Button>("confirm-no-button");
 
             resumeButton.clicked += Close;
+            if (settingsButton != null) settingsButton.clicked += OnSettingsClicked;
             leaveButton.clicked += OnLeaveClicked;
             quitButton.clicked += OnQuitClicked;
             confirmYesButton.clicked += OnConfirmYes;
             confirmNoButton.clicked += HideConfirm;
 
-            pauseAction = new InputAction("Pause", InputActionType.Button, "<Keyboard>/escape");
-            pauseAction.AddBinding("<Gamepad>/start");
+            LFInput.EnsureCreated();
+            pauseAction = LFInput.Pause;
             pauseAction.performed += OnPausePerformed;
-            pauseAction.Enable();
 
             refreshJob = root.schedule.Execute(RefreshInfo).Every(500);
             refreshJob.Pause();
@@ -65,14 +66,13 @@ namespace LandFlipper.UI
         void OnDisable()
         {
             resumeButton.clicked -= Close;
+            if (settingsButton != null) settingsButton.clicked -= OnSettingsClicked;
             leaveButton.clicked -= OnLeaveClicked;
             quitButton.clicked -= OnQuitClicked;
             confirmYesButton.clicked -= OnConfirmYes;
             confirmNoButton.clicked -= HideConfirm;
 
-            pauseAction.performed -= OnPausePerformed;
-            pauseAction.Disable();
-            pauseAction.Dispose();
+            if (pauseAction != null) pauseAction.performed -= OnPausePerformed;
 
             refreshJob?.Pause();
 
@@ -85,11 +85,19 @@ namespace LandFlipper.UI
 
         void OnPausePerformed(InputAction.CallbackContext _)
         {
+            // Esc yetenek ağacını ya da ayarları kapatıyorsa oyun menüsü bu tuşla açılıp kapanmasın
+            if (!IsOpen && (SkillTreeController.IsAnyOpen || SkillTreeController.ClosedFrame == Time.frameCount))
+                return;
+            if (SettingsController.IsOpen || SettingsController.ConsumedEscapeFrame == Time.frameCount)
+                return;
+
             if (IsOpen && pendingAction != PendingAction.None)
                 HideConfirm();
             else
                 SetOpen(!IsOpen);
         }
+
+        void OnSettingsClicked() => SettingsController.Instance?.Open();
 
         public void Open() => SetOpen(true);
         public void Close() => SetOpen(false);

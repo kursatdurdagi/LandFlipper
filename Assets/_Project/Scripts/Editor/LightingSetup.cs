@@ -1,0 +1,233 @@
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
+
+namespace LandFlipper.EditorTools
+{
+    /// <summary>
+    /// Stylized / low poly görünüm için ışık, gökyüzü ve post-processing kurulumu.
+    /// Hedef: sıcak öğleden sonra ışığı, canlı ama yumuşak renkler, okunaklı faceted yüzeyler.
+    /// Tüm değerler tek yerde; tekrar çalıştırmak güvenlidir.
+    /// </summary>
+    public static class LightingSetup
+    {
+        const string SettingsFolder = "Assets/_Project/Settings";
+        const string ProfilePath = SettingsFolder + "/LF_StylizedVolume.asset";
+        const string SkyboxPath = "Assets/_Project/Art/Materials/Sky/M_Skybox_Stylized.mat";
+
+        // Ortak renk paleti
+        static readonly Color SunColor = new Color(1f, 0.88f, 0.72f);
+        static readonly Color SkyTint = new Color(0.52f, 0.66f, 0.86f);
+        static readonly Color HorizonFog = new Color(0.80f, 0.86f, 0.88f);
+
+        // ------------------------------------------------------------ public
+
+        [MenuItem("Land Flipper/Setup/Apply Lighting To Open Scene")]
+        public static void ApplyToOpenScene()
+        {
+            ConfigurePipeline();
+            var profile = CreateProfile();
+            var sky = CreateSkybox();
+            var sun = Object.FindFirstObjectByType<Light>();
+            ApplySceneLighting(sun, sky);
+            AddGlobalVolume(profile);
+            foreach (var cam in Object.FindObjectsByType<Camera>(FindObjectsSortMode.None))
+                ConfigureCamera(cam);
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
+        }
+
+        public static void ConfigurePipeline()
+        {
+            var urp = (QualitySettings.renderPipeline ?? GraphicsSettings.defaultRenderPipeline) as UniversalRenderPipelineAsset;
+            if (urp == null) return;
+
+            urp.shadowDistance = 90f;
+            urp.shadowCascadeCount = 4;
+            urp.supportsHDR = true;
+
+            var so = new SerializedObject(urp);
+            SetFloat(so, "m_MainLightShadowmapResolution", 4096);
+            SetBool(so, "m_SoftShadowsSupported", true);
+            SetFloat(so, "m_SoftShadowQuality", 2); // orta
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            // SSAO: low poly yüzeylerin birleşim yerlerinde yumuşak derinlik
+            var list = so.FindProperty("m_RendererDataList");
+            for (int i = 0; i < list.arraySize; i++)
+            {
+                var data = list.GetArrayElementAtIndex(i).objectReferenceValue as ScriptableRendererData;
+                if (data == null) continue;
+                foreach (var feature in data.rendererFeatures)
+                {
+                    if (feature == null || feature.GetType().Name != "ScreenSpaceAmbientOcclusion") continue;
+                    var fso = new SerializedObject(feature);
+                    SetFloat(fso, "m_Settings.Intensity", 1.6f);
+                    SetFloat(fso, "m_Settings.Radius", 0.4f);
+                    SetFloat(fso, "m_Settings.DirectLightingStrength", 0.35f);
+                    fso.ApplyModifiedPropertiesWithoutUndo();
+                    feature.SetActive(true);
+                }
+                EditorUtility.SetDirty(data);
+            }
+            EditorUtility.SetDirty(urp);
+        }
+
+        public static VolumeProfile CreateProfile()
+        {
+            LowPolyWorldBuilder.EnsureFolder(SettingsFolder);
+            var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(ProfilePath);
+            if (profile == null)
+            {
+                profile = ScriptableObject.CreateInstance<VolumeProfile>();
+                AssetDatabase.CreateAsset(profile, ProfilePath);
+            }
+
+            // Eski override'ları temizle (alt asset'ler dahil)
+            foreach (var component in new System.Collections.Generic.List<VolumeComponent>(profile.components))
+            {
+                profile.components.Remove(component);
+                Object.DestroyImmediate(component, true);
+            }
+
+            // Renkleri koruyan tonemapping (ACES stylized renkleri soldurur)
+            var tone = Add<Tonemapping>(profile);
+            tone.mode.Override(TonemappingMode.Neutral);
+
+            var color = Add<ColorAdjustments>(profile);
+            color.postExposure.Override(0.05f);
+            color.contrast.Override(16f);
+            color.saturation.Override(8f);
+            color.colorFilter.Override(new Color(1f, 0.985f, 0.95f));
+
+            var white = Add<WhiteBalance>(profile);
+            white.temperature.Override(4f);
+            white.tint.Override(2f);
+
+            // sıcak ışıklar, hafif serin gölgeler
+            var smh = Add<ShadowsMidtonesHighlights>(profile);
+            smh.shadows.Override(new Vector4(0.94f, 0.98f, 1.08f, 0f));
+            smh.midtones.Override(new Vector4(1f, 1f, 1f, 0f));
+            smh.highlights.Override(new Vector4(1.04f, 1.01f, 0.95f, 0f));
+
+            var bloom = Add<Bloom>(profile);
+            bloom.threshold.Override(1.05f);
+            bloom.intensity.Override(0.35f);
+            bloom.scatter.Override(0.65f);
+            bloom.tint.Override(new Color(1f, 0.93f, 0.82f));
+
+            var vignette = Add<Vignette>(profile);
+            vignette.intensity.Override(0.2f);
+            vignette.smoothness.Override(0.45f);
+            vignette.color.Override(new Color(0.12f, 0.1f, 0.08f));
+
+            EditorUtility.SetDirty(profile);
+            AssetDatabase.SaveAssets();
+            return profile;
+        }
+
+        public static Material CreateSkybox()
+        {
+            LowPolyWorldBuilder.EnsureFolder("Assets/_Project/Art/Materials/Sky");
+            var sky = AssetDatabase.LoadAssetAtPath<Material>(SkyboxPath);
+            if (sky == null)
+            {
+                sky = new Material(Shader.Find("Skybox/Procedural"));
+                AssetDatabase.CreateAsset(sky, SkyboxPath);
+            }
+            sky.SetFloat("_SunDisk", 2f);            // yüksek kaliteli güneş diski
+            sky.SetFloat("_SunSize", 0.035f);
+            sky.SetFloat("_SunSizeConvergence", 6f);
+            sky.SetFloat("_AtmosphereThickness", 0.75f);
+            sky.SetColor("_SkyTint", SkyTint);
+            sky.SetColor("_GroundColor", new Color(0.46f, 0.52f, 0.38f));
+            sky.SetFloat("_Exposure", 1.15f);
+            EditorUtility.SetDirty(sky);
+            return sky;
+        }
+
+        /// <summary>Güneş, gökyüzü, ortam ışığı ve sis (sahne bazlı RenderSettings).</summary>
+        public static void ApplySceneLighting(Light sun, Material skybox)
+        {
+            skybox = AssetDatabase.LoadAssetAtPath<Material>(SkyboxPath) ?? skybox; // taze referans
+            if (sun != null)
+            {
+                sun.type = LightType.Directional;
+                sun.color = SunColor;
+                sun.intensity = 1.65f;
+                sun.shadows = LightShadows.Soft;
+                sun.shadowStrength = 0.82f;
+                sun.shadowBias = 0.04f;
+                sun.shadowNormalBias = 0.35f;
+                // alçak, sıcak öğleden sonra açısı: uzun yumuşak gölgeler
+                sun.transform.rotation = Quaternion.Euler(36f, -42f, 0f);
+                RenderSettings.sun = sun;
+            }
+
+            if (skybox != null) RenderSettings.skybox = skybox;
+
+            RenderSettings.ambientMode = AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = new Color(0.60f, 0.70f, 0.86f);
+            RenderSettings.ambientEquatorColor = new Color(0.66f, 0.66f, 0.56f);
+            RenderSettings.ambientGroundColor = new Color(0.36f, 0.32f, 0.24f);
+            RenderSettings.ambientIntensity = 1f;
+
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogColor = HorizonFog;
+            RenderSettings.fogStartDistance = 40f;
+            RenderSettings.fogEndDistance = 180f;
+
+            RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
+            RenderSettings.reflectionIntensity = 0.6f;
+        }
+
+        public static void AddGlobalVolume(VolumeProfile profile)
+        {
+            profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(ProfilePath) ?? profile; // taze referans
+            var existing = Object.FindFirstObjectByType<Volume>();
+            var go = existing != null ? existing.gameObject : new GameObject("Global Volume (Stylized)");
+            var volume = existing != null ? existing : go.AddComponent<Volume>();
+            volume.isGlobal = true;
+            volume.priority = 0f;
+            volume.sharedProfile = profile;
+        }
+
+        public static void ConfigureCamera(Camera cam)
+        {
+            if (cam == null) return;
+            var data = cam.GetComponent<UniversalAdditionalCameraData>();
+            if (data == null) data = cam.gameObject.AddComponent<UniversalAdditionalCameraData>();
+            data.renderPostProcessing = true;
+            data.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+            data.antialiasingQuality = AntialiasingQuality.High;
+            cam.allowHDR = true;
+            cam.farClipPlane = 400f;
+        }
+
+        // ------------------------------------------------------------ helpers
+
+        static T Add<T>(VolumeProfile profile) where T : VolumeComponent
+        {
+            var component = profile.Add<T>(true);
+            component.name = typeof(T).Name;
+            component.hideFlags = HideFlags.HideInInspector | HideFlags.HideInHierarchy;
+            AssetDatabase.AddObjectToAsset(component, profile);
+            return component;
+        }
+
+        static void SetFloat(SerializedObject so, string path, float value)
+        {
+            var p = so.FindProperty(path);
+            if (p == null) return;
+            if (p.propertyType == SerializedPropertyType.Integer || p.propertyType == SerializedPropertyType.Enum) p.intValue = (int)value;
+            else p.floatValue = value;
+        }
+
+        static void SetBool(SerializedObject so, string path, bool value)
+        {
+            var p = so.FindProperty(path);
+            if (p != null) p.boolValue = value;
+        }
+    }
+}

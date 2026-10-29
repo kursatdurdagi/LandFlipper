@@ -16,6 +16,6 @@ MonoBehaviour:
   displayName: "K\xFCt\xFCk"
   sellPrice: 15
   slotCost: 2
-  stackHeight: 0.36
-  carryEuler: {x: 0, y: 90, z: 0}
+  stackHeight: 0.33
+  carryEuler: {x: 0, y: 0, z: 0}
   prefab: {fileID: 3930257634898101055, guid: 0c01b94ce2bb6474984ac75ca7f6083b, type: 3}

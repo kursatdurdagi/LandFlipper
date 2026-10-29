@@ -229,6 +229,131 @@
     margin-top: 4px;
 }
 
+/* ---------- HUD: basılı tutma halkası ---------- */
+.hud-hold-ring {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 58px;
+    height: 58px;
+    margin-left: -29px;
+    margin-top: -29px;
+}
+
+/* ---------- HUD: seviye / XP ---------- */
+.hud-level {
+    position: absolute;
+    top: 22px;
+    left: 24px;
+    flex-direction: row;
+    align-items: center;
+    padding: 8px 14px 8px 8px;
+    border-radius: 30px;
+    background-color: rgba(30, 36, 26, 0.72);
+}
+
+.hud-level-badge {
+    width: 46px;
+    height: 46px;
+    border-radius: 23px;
+    align-items: center;
+    justify-content: center;
+    background-color: rgb(94, 140, 74);
+    border-width: 3px;
+    border-color: rgb(141, 186, 109);
+    margin-right: 10px;
+}
+
+.hud-level-value {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: rgb(255, 253, 246);
+}
+
+.hud-level-info {
+    width: 170px;
+}
+
+.hud-xp-label {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: rgb(255, 253, 246);
+    margin-bottom: 4px;
+}
+
+.hud-xp-track {
+    height: 8px;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.18);
+    overflow: hidden;
+}
+
+.hud-xp-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 4px;
+    background-color: rgb(240, 190, 60);
+    transition-property: width;
+    transition-duration: 0.35s;
+}
+
+.hud-points {
+    margin-left: 12px;
+    padding: 4px 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: rgb(59, 47, 37);
+    background-color: rgb(255, 215, 110);
+}
+
+.hud-xp-popup {
+    position: absolute;
+    left: 52%;
+    top: 46%;
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: rgb(255, 215, 110);
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+    transition-property: opacity, translate;
+    transition-duration: 0.25s;
+}
+
+.hud-xp-popup.fade {
+    opacity: 0;
+    translate: 0 -18px;
+}
+
+.hud-levelup {
+    position: absolute;
+    top: 20%;
+    left: 0;
+    right: 0;
+    align-items: center;
+    transition-property: opacity, scale;
+    transition-duration: 0.3s;
+}
+
+.hud-levelup.fade {
+    opacity: 0;
+    scale: 0.9 0.9;
+}
+
+.hud-levelup-title {
+    font-size: 54px;
+    -unity-font-style: bold;
+    color: rgb(255, 215, 110);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.75);
+    letter-spacing: 3px;
+}
+
+.hud-levelup-sub {
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: rgb(255, 253, 246);
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+}
+
 /* ---------- HUD ---------- */
 .hud-prompt {
     position: absolute;

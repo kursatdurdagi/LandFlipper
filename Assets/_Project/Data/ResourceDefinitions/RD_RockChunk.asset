@@ -16,6 +16,6 @@ MonoBehaviour:
   displayName: "Ta\u015F"
   sellPrice: 6
   slotCost: 1
-  stackHeight: 0.3
+  stackHeight: 0.24
   carryEuler: {x: 0, y: 0, z: 0}
   prefab: {fileID: 5258049396696142695, guid: 07a52c851b1eebe4990cbe852a574c95, type: 3}

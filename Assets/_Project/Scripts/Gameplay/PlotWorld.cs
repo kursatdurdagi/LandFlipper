@@ -28,6 +28,14 @@ namespace LandFlipper.Gameplay
         [Tooltip("Kaç çim öbeği biçilince bir balya oluşur.")]
         [SerializeField] int grassCutsPerBale = 3;
 
+        [Header("XP (GDD 13: XP ilerleme sağlayan etkinliklerden kazanılır)")]
+        [SerializeField] int grassXp = 2;
+        [SerializeField] int bushXp = 4;
+        [SerializeField] int rockXp = 8;
+        [SerializeField] int treeXp = 12;
+        [Tooltip("Kulübeden sökülen her parça için.")]
+        [SerializeField] int shackPartXp = 3;
+
         readonly SyncDictionary<int, NodeState> states = new SyncDictionary<int, NodeState>();
         readonly Dictionary<int, ResourceNode> nodes = new Dictionary<int, ResourceNode>();
         int grassCutCounter;
@@ -83,6 +91,14 @@ namespace LandFlipper.Gameplay
 
         public bool TryGetNode(int id, out ResourceNode node) => nodes.TryGetValue(id, out node);
 
+        /// <summary>Kaynak tanımını id ile bulur (istemci tarafı görsel efektler için).</summary>
+        public ResourceDefinition FindDefinition(string id)
+        {
+            foreach (var def in new[] { logDefinition, rockChunkDefinition, grassDefinition, plankDefinition })
+                if (def != null && def.id == id) return def;
+            return null;
+        }
+
         public NodeState GetState(int id) => states.TryGetValue(id, out var s) ? s : default;
 
         // ------------------------------------------------------------ server
@@ -108,11 +124,30 @@ namespace LandFlipper.Gameplay
             ApplyLocal(id, state, true);
             RpcHitFeedback(id);
 
+            int xpReward = 0;
             if (node is ShackNode shack)
-                SpawnShackPlanks(shack, shack.RemovedPartsFor(hitsBefore), state.depleted ? shack.PartCount : shack.RemovedPartsFor(state.hitsTaken));
+            {
+                int from = shack.RemovedPartsFor(hitsBefore);
+                int to = state.depleted ? shack.PartCount : shack.RemovedPartsFor(state.hitsTaken);
+                SpawnShackPlanks(shack, from, to);
+                xpReward += (to - from) * shackPartXp;
+            }
 
             if (state.depleted)
+            {
                 OnNodeDepleted(node, state);
+                xpReward += node.Kind switch
+                {
+                    NodeKind.Grass => grassXp,
+                    NodeKind.Bush => bushXp,
+                    NodeKind.Rock => rockXp,
+                    NodeKind.Tree => treeXp,
+                    _ => 0
+                };
+            }
+
+            if (xpReward > 0 && CareerState.Instance != null)
+                CareerState.Instance.ServerAddXp(xpReward);
             return true;
         }
 

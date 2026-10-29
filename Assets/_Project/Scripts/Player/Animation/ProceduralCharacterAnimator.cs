@@ -56,6 +56,7 @@ namespace LandFlipper.Player.Animation
             public Transform Upper, Middle, End;
             public Vector3 EndRestLocal;        // kök uzayında ayak/el dinlenme konumu
             public Quaternion EndRestRelative;  // kök dönüşüne göre ayak dönüşü
+            public Quaternion EndBindLocal;     // el/ayak bind yerel dönüşü (bilek bükümü için)
             public float Length;
         }
 
@@ -117,6 +118,7 @@ namespace LandFlipper.Player.Animation
                 End = end,
                 EndRestLocal = transform.InverseTransformPoint(end.position),
                 EndRestRelative = Quaternion.Inverse(transform.rotation) * end.rotation,
+                EndBindLocal = end.localRotation,
                 Length = Vector3.Distance(upper.position, middle.position) + Vector3.Distance(middle.position, end.position)
             };
         }
@@ -225,12 +227,14 @@ namespace LandFlipper.Player.Animation
         {
             Vector3 shoulder = arm.Upper.position;
 
-            if (IsHolding && HoldTarget != null)
+            if (IsHolding && HoldTarget != null && side > 0f)
             {
-                // Yığının en altını iki yandan kavra
-                Vector3 grip = HoldTarget.position + transform.right * (side * 0.24f) + HoldTarget.up * 0.08f;
-                Vector3 hint = shoulder + transform.right * (side * 0.5f) - transform.up * 0.4f;
-                TwoBoneIK.Solve(arm.Upper, arm.Middle, arm.End, grip, hint);
+                // Sağ el: yığını avuç içi yukarı taşır (sol kol normal sallanmaya devam eder)
+                Vector3 up = HoldTarget.up;
+                Vector3 fingers = (HoldTarget.forward - HoldTarget.right * 0.35f).normalized;
+                Vector3 wrist = HoldTarget.position - fingers * 0.07f - up * 0.025f;
+                Vector3 hint = shoulder + transform.right * 0.4f - transform.up * 0.5f - transform.forward * 0.1f;
+                HandPose.Solve(arm.Upper, arm.Middle, arm.End, arm.EndBindLocal, wrist, hint, up, fingers);
                 return;
             }
 

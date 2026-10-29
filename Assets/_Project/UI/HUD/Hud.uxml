@@ -3,6 +3,20 @@
     <ui:VisualElement name="hud-root" class="screen" picking-mode="Ignore">
         <ui:VisualElement name="crosshair" class="crosshair" picking-mode="Ignore" />
         <ui:Label name="prompt-label" class="hud-prompt hidden" picking-mode="Ignore" />
+        <ui:Label name="xp-popup" class="hud-xp-popup hidden" picking-mode="Ignore" />
+
+        <ui:VisualElement name="level-panel" class="hud-level" picking-mode="Ignore">
+            <ui:VisualElement class="hud-level-badge" picking-mode="Ignore">
+                <ui:Label name="hud-level-label" text="1" class="hud-level-value" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:VisualElement class="hud-level-info" picking-mode="Ignore">
+                <ui:Label name="hud-xp-label" text="0 / 40 XP" class="hud-xp-label" picking-mode="Ignore" />
+                <ui:VisualElement class="hud-xp-track" picking-mode="Ignore">
+                    <ui:VisualElement name="hud-xp-fill" class="hud-xp-fill" picking-mode="Ignore" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Label name="hud-points" text="1 puan · [TAB]" class="hud-points hidden" picking-mode="Ignore" />
+        </ui:VisualElement>
 
         <ui:VisualElement name="money-panel" class="hud-money" picking-mode="Ignore">
             <ui:VisualElement class="hud-coin" picking-mode="Ignore" />
@@ -14,7 +28,12 @@
             <ui:Label name="carry-list" class="hud-carry-list" picking-mode="Ignore" />
         </ui:VisualElement>
 
+        <ui:VisualElement name="levelup-banner" class="hud-levelup hidden" picking-mode="Ignore">
+            <ui:Label name="levelup-title" text="SEVİYE 2" class="hud-levelup-title" picking-mode="Ignore" />
+            <ui:Label text="+1 yetenek puanı · [TAB] ile yetenek ağacını aç" class="hud-levelup-sub" picking-mode="Ignore" />
+        </ui:VisualElement>
+
         <ui:Label name="toast-label" class="hud-toast hidden" picking-mode="Ignore" />
-        <ui:Label name="hint-label" text="Sol Tık: Biç/Kes/Kır · E: Al/Sat · R: Bırak (basılı: hepsi) · V: Görünüm · Esc: Menü" class="hud-hint" picking-mode="Ignore" />
+        <ui:Label name="hint-label" text="Sol Tık: Kes/Kır · Basılı tut: Biç · E: Al/Sat (basılı: hepsini sat) · R: At (basılı: hepsi) · TAB: Yetenekler · V: Görünüm · Esc: Menü" class="hud-hint" picking-mode="Ignore" />
     </ui:VisualElement>
 </ui:UXML>

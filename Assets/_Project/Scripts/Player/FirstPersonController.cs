@@ -1,4 +1,5 @@
 using LandFlipper.Core;
+using LandFlipper.Gameplay;
 using LandFlipper.Player.Animation;
 using Mirror;
 using UnityEngine;
@@ -11,13 +12,12 @@ namespace LandFlipper.Player
     /// Ağ uyumlu birinci şahıs kontrolcü. Hareket local oyuncuda hesaplanır ve
     /// NetworkTransform (ClientToServer) ile diğerlerine gönderilir. Bakış eğimi
     /// SyncVar ile paylaşılır; diğer oyuncular karakterin nereye baktığını görür.
-    /// Ekonomi/dünya değişiklikleri bu sınıfta değil, host doğrulamalı sistemlerde yapılacak.
+    /// Girdi LFInput'tan (değiştirilebilir tuşlar), hassasiyet/FOV SettingsService'ten gelir.
     /// </summary>
     [RequireComponent(typeof(CharacterController))]
     public class FirstPersonController : NetworkBehaviour
     {
         [Header("References")]
-        [SerializeField] InputActionAsset inputActions;
         [SerializeField] Transform cameraPivot;
         [SerializeField] Camera playerCamera;
         [SerializeField] ProceduralCharacterAnimator characterAnimator;
@@ -32,20 +32,17 @@ namespace LandFlipper.Player
         [SerializeField] float gravity = -20f;
 
         [Header("Look")]
-        [SerializeField] float mouseSensitivity = 0.12f;
-        [SerializeField] float gamepadSensitivity = 180f;
         [SerializeField] float minPitch = -85f;
         [SerializeField] float maxPitch = 85f;
 
         [Header("Debug View")]
-        [Tooltip("V tuşu ile geçilen test amaçlı üçüncü şahıs kamera ofseti.")]
+        [Tooltip("V tuşu ile geçilen üçüncü şahıs kamera ofseti.")]
         [SerializeField] Vector3 thirdPersonOffset = new Vector3(0.5f, 0.2f, -2.8f);
 
         [SyncVar] float syncedPitch;
 
         CharacterController characterController;
-        InputActionAsset runtimeActions;
-        InputAction moveAction, lookAction, jumpAction, sprintAction, toggleViewAction;
+        bool inputReady;
         Vector3 horizontalVelocity;
         float verticalVelocity;
         float pitch;
@@ -70,17 +67,11 @@ namespace LandFlipper.Player
             SetCameraActive(true);
             SetThirdPerson(false);
 
-            runtimeActions = Instantiate(inputActions);
-            var map = runtimeActions.FindActionMap("Player", true);
-            moveAction = map.FindAction("Move", true);
-            lookAction = map.FindAction("Look", true);
-            jumpAction = map.FindAction("Jump", true);
-            sprintAction = map.FindAction("Sprint", true);
-            map.Enable();
+            LFInput.EnsureCreated();
+            inputReady = true;
 
-            toggleViewAction = new InputAction("ToggleView", InputActionType.Button, "<Keyboard>/v");
-            toggleViewAction.AddBinding("<Gamepad>/select");
-            toggleViewAction.Enable();
+            SettingsService.Changed += ApplySettings;
+            ApplySettings();
 
             if (!InputGate.IsBlocked)
                 CursorUtility.SetLocked(true);
@@ -88,16 +79,12 @@ namespace LandFlipper.Player
 
         public override void OnStopLocalPlayer()
         {
-            if (runtimeActions != null)
-            {
-                runtimeActions.Disable();
-                Destroy(runtimeActions);
-                runtimeActions = null;
-            }
-            toggleViewAction?.Dispose();
-            toggleViewAction = null;
+            inputReady = false;
+            SettingsService.Changed -= ApplySettings;
             CursorUtility.SetLocked(false);
         }
+
+        void ApplySettings() => SettingsService.ApplyToCamera(playerCamera, true);
 
         void SetCameraActive(bool active)
         {
@@ -120,17 +107,17 @@ namespace LandFlipper.Player
 
         void Update()
         {
-            if (isLocalPlayer && runtimeActions != null)
+            if (isLocalPlayer && inputReady)
             {
                 bool blocked = InputGate.IsBlocked;
-                Vector2 moveInput = blocked ? Vector2.zero : moveAction.ReadValue<Vector2>();
-                bool sprint = !blocked && sprintAction.IsPressed();
-                bool jump = !blocked && jumpAction.WasPressedThisFrame();
+                Vector2 moveInput = blocked ? Vector2.zero : LFInput.Move.ReadValue<Vector2>();
+                bool sprint = !blocked && LFInput.Sprint.IsPressed();
+                bool jump = !blocked && LFInput.Jump.WasPressedThisFrame();
 
                 if (!blocked)
                 {
                     HandleLook();
-                    if (toggleViewAction.WasPressedThisFrame())
+                    if (LFInput.ToggleView.WasPressedThisFrame())
                         SetThirdPerson(!thirdPerson);
                 }
 
@@ -152,11 +139,15 @@ namespace LandFlipper.Player
 
         void HandleLook()
         {
-            Vector2 raw = lookAction.ReadValue<Vector2>();
+            Vector2 raw = LFInput.Look.ReadValue<Vector2>();
             if (raw == Vector2.zero) return;
 
-            bool isPointer = lookAction.activeControl?.device is Pointer;
-            Vector2 delta = isPointer ? raw * mouseSensitivity : raw * (gamepadSensitivity * Time.deltaTime);
+            var settings = SettingsService.Current;
+            bool isPointer = LFInput.Look.activeControl?.device is Pointer;
+            Vector2 delta = isPointer
+                ? raw * settings.mouseSensitivity
+                : raw * (settings.gamepadSensitivity * Time.deltaTime);
+            if (settings.invertY) delta.y = -delta.y;
 
             transform.Rotate(0f, delta.x, 0f);
             pitch = Mathf.Clamp(pitch - delta.y, minPitch, maxPitch);
@@ -164,7 +155,9 @@ namespace LandFlipper.Player
 
         void HandleMovement(Vector2 input, bool sprint, bool jump)
         {
-            float speed = sprint ? sprintSpeed : walkSpeed;
+            // "Hareket" yetenekleri: genel hız ve koşma hızı çarpanları
+            float speed = sprint ? sprintSpeed * (1f + CareerState.Stat(SkillStat.SprintSpeed)) : walkSpeed;
+            speed *= 1f + CareerState.Stat(SkillStat.MoveSpeed);
             Vector3 target = (transform.right * input.x + transform.forward * input.y) * speed;
             horizontalVelocity = Vector3.Lerp(horizontalVelocity, target, 1f - Mathf.Exp(-acceleration * Time.deltaTime));
 

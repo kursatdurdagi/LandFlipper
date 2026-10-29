@@ -49,7 +49,6 @@ namespace LandFlipper.Gameplay
         void ApplyPhysicsMode()
         {
             bool simulate = isServer && !IsCarried;
-            if (!IsCarried) transform.localScale = Vector3.one; // elde küçültülmüş olabilir
             body.isKinematic = !simulate;
             body.interpolation = simulate ? RigidbodyInterpolation.Interpolate : RigidbodyInterpolation.None;
             foreach (var c in colliders) c.enabled = !IsCarried;
@@ -70,7 +69,15 @@ namespace LandFlipper.Gameplay
         }
 
         [Server]
-        public void ServerDrop(Vector3 position, Quaternion rotation, Vector3 impulse)
+        public void ServerDrop(Vector3 position, Quaternion rotation, Vector3 impulse) =>
+            ServerDrop(position, rotation, impulse, Vector3.zero, null);
+
+        /// <summary>
+        /// Elden fırlatma: nesne bulunduğu yerden verilen hız ve dönüşle atılır.
+        /// Atan oyuncunun gövdesiyle kısa bir süre çarpışmaz (içinden doğup itilmesin).
+        /// </summary>
+        [Server]
+        public void ServerDrop(Vector3 position, Quaternion rotation, Vector3 impulse, Vector3 spin, Collider ignoreFor)
         {
             carrierNetId = 0;
             transform.SetPositionAndRotation(position, rotation);
@@ -80,12 +87,30 @@ namespace LandFlipper.Gameplay
             body.linearVelocity = Vector3.zero;
             body.angularVelocity = Vector3.zero;
             ServerLaunch(impulse);
+            if (spin != Vector3.zero) body.AddTorque(spin, ForceMode.VelocityChange);
             syncPosition = position;
             syncRotation = rotation;
+
+            if (ignoreFor != null)
+            {
+                foreach (var c in colliders) Physics.IgnoreCollision(c, ignoreFor, true);
+                StartCoroutine(RestoreCollision(ignoreFor));
+            }
+        }
+
+        System.Collections.IEnumerator RestoreCollision(Collider other)
+        {
+            yield return new WaitForSeconds(0.6f);
+            if (other == null) yield break;
+            foreach (var c in colliders) Physics.IgnoreCollision(c, other, false);
         }
 
         void Update()
         {
+            // elde küçültülmüş olabilir: bırakılınca yumuşakça normal boyuta dön
+            if (!IsCarried && transform.localScale != Vector3.one)
+                transform.localScale = Vector3.MoveTowards(transform.localScale, Vector3.one, Time.deltaTime * 4f);
+
             if (IsCarried) return;
 
             if (isServer)

@@ -8,7 +8,10 @@ namespace LandFlipper.Gameplay
     {
         [SerializeField] Collider targetCollider;
         [SerializeField] float cutHeight = 0.18f;
+        [Tooltip("Başlangıç aletiyle (makas) bir öbeği biçmek için basılı tutma süresi.")]
+        [SerializeField] float cutDuration = 1.2f;
 
+        public override float HoldDuration => cutDuration;
         public override NodeKind Kind => NodeKind.Grass;
         public override string ActionVerb => "Biç";
         public override string DisplayName => "Çimen";

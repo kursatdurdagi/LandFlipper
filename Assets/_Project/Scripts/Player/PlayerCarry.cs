@@ -18,18 +18,50 @@ namespace LandFlipper.Player
         [SerializeField] Transform carryAnchor;
         [Tooltip("Birinci şahısta yükün görüşü kapatmaması için ekranın altında, küçültülmüş gösterim noktası.")]
         [SerializeField] Transform viewAnchor;
-        [SerializeField] float viewScale = 0.6f;
+        [SerializeField] float viewScale = 0.38f;
+        [Tooltip("1. şahısta yığın yukarı değil, hafif ileri doğru büyür (görüşü kapatmasın).")]
+        [SerializeField] float viewStackLean = 0.3f;
         [SerializeField] ProceduralCharacterAnimator characterAnimator;
         [SerializeField] float followSharpness = 30f;
 
-        FirstPersonController controller;
+        [Header("First Person Bob")]
+        [Tooltip("Dururken el ve yükün hafif inip kalkması (m).")]
+        [SerializeField] float idleBob = 0.006f;
+        [Tooltip("Yürürken adım ritminde sallanma (m).")]
+        [SerializeField] float walkBob = 0.02f;
 
-        void Awake() => controller = GetComponent<FirstPersonController>();
+        FirstPersonController controller;
+        CharacterController characterController;
+        Vector3 viewAnchorBase;
+        float bobPhase;
+
+        void Awake()
+        {
+            controller = GetComponent<FirstPersonController>();
+            characterController = GetComponent<CharacterController>();
+            if (viewAnchor != null) viewAnchorBase = viewAnchor.localPosition;
+        }
+
+        /// <summary>
+        /// 1. şahıs çapasını sallar. El (FirstPersonArms) ve yük aynı çapayı kullandığı için birlikte oynarlar.
+        /// </summary>
+        void ApplyViewBob()
+        {
+            Vector3 v = characterController != null ? characterController.velocity : Vector3.zero;
+            float moving = Mathf.Clamp01(new Vector3(v.x, 0f, v.z).magnitude / 4f);
+            bobPhase += Time.deltaTime * Mathf.Lerp(2.2f, 9f, moving);
+            float amplitude = Mathf.Lerp(idleBob, walkBob, moving);
+            viewAnchor.localPosition = viewAnchorBase + new Vector3(
+                Mathf.Cos(bobPhase * 0.5f) * amplitude * 0.5f,
+                Mathf.Sin(bobPhase) * amplitude,
+                0f);
+        }
 
         readonly SyncList<uint> carried = new SyncList<uint>();
         readonly List<Pickup> buffer = new List<Pickup>();
 
-        public int CapacitySlots => capacitySlots;
+        /// <summary>Temel kapasite + "Taşıma" yetenekleri (host kariyerinden, herkeste aynı).</summary>
+        public int CapacitySlots => capacitySlots + Mathf.RoundToInt(CareerState.Stat(SkillStat.CarryCapacity));
         public int Count => carried.Count;
         public bool IsCarrying => carried.Count > 0;
 
@@ -44,7 +76,7 @@ namespace LandFlipper.Player
             }
         }
 
-        public bool HasRoomFor(Pickup pickup) => UsedSlots + pickup.Definition.slotCost <= capacitySlots;
+        public bool HasRoomFor(Pickup pickup) => UsedSlots + pickup.Definition.slotCost <= CapacitySlots;
 
         /// <summary>Alttan üste doğru taşınan nesneler.</summary>
         public IReadOnlyList<Pickup> Items
@@ -74,7 +106,7 @@ namespace LandFlipper.Player
         [Server]
         public bool ServerTryAdd(Pickup pickup)
         {
-            if (pickup == null || pickup.IsCarried || !HasRoomFor(pickup)) return false;
+            if (pickup == null || pickup.IsCarried || !HasRoomFor(pickup)) return false; // kapasite host'ta yeniden doğrulanır
             carried.Add(pickup.netId);
             pickup.ServerSetCarrier(netId);
             return true;
@@ -127,8 +159,17 @@ namespace LandFlipper.Player
             if (items.Count == 0 || carryAnchor == null) return;
 
             bool firstPersonView = isLocalPlayer && viewAnchor != null && controller != null && !controller.IsThirdPerson;
+            if (firstPersonView) ApplyViewBob();
             Transform anchor = firstPersonView ? viewAnchor : carryAnchor;
             float scale = firstPersonView ? viewScale : 1f;
+
+            Vector3 stackDirection = firstPersonView
+                ? (anchor.up + anchor.forward * viewStackLean).normalized
+                : anchor.up;
+
+            // Ele yeni gelen nesne yumuşakça uçar; avuca oturunca ele kilitlenir.
+            // (Sürekli takip etmek, hareket ederken el ile nesne arasında titreme yapıyordu.)
+            settled.RemoveWhere(id => !carried.Contains(id));
 
             float k = 1f - Mathf.Exp(-followSharpness * Time.deltaTime);
             float height = 0f;
@@ -136,15 +177,27 @@ namespace LandFlipper.Player
             {
                 var def = item.Definition;
                 float h = def.stackHeight * scale;
-                Vector3 targetPos = anchor.position + anchor.up * (height + h * 0.5f);
+                Vector3 targetPos = anchor.position + stackDirection * (height + h * 0.5f);
                 Quaternion targetRot = anchor.rotation * Quaternion.Euler(def.carryEuler);
-                item.transform.SetPositionAndRotation(
-                    Vector3.Lerp(item.transform.position, targetPos, k),
-                    Quaternion.Slerp(item.transform.rotation, targetRot, k));
-                item.transform.localScale = Vector3.one * scale;
+                var t = item.transform;
+
+                if (settled.Contains(item.netId))
+                {
+                    t.SetPositionAndRotation(targetPos, targetRot);
+                }
+                else
+                {
+                    t.SetPositionAndRotation(Vector3.Lerp(t.position, targetPos, k), Quaternion.Slerp(t.rotation, targetRot, k));
+                    if ((t.position - targetPos).sqrMagnitude < 0.0009f && Quaternion.Angle(t.rotation, targetRot) < 4f)
+                        settled.Add(item.netId);
+                }
+
+                t.localScale = Vector3.one * scale;
                 height += h;
             }
         }
+
+        readonly HashSet<uint> settled = new HashSet<uint>();
 
 #if UNITY_EDITOR
         public void EditorSetup(Transform anchor, Transform firstPersonAnchor, ProceduralCharacterAnimator animator)

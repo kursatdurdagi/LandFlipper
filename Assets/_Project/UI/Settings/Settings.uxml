@@ -1,0 +1,28 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="../Styles/Common.uss" />
+    <Style src="Settings.uss" />
+    <ui:VisualElement name="settings-overlay" class="screen settings-overlay hidden">
+        <ui:VisualElement class="settings-panel">
+
+            <ui:VisualElement class="settings-header">
+                <ui:Label text="AYARLAR" class="settings-title" />
+                <ui:VisualElement name="settings-tabs" class="settings-tabs">
+                    <ui:Button name="tab-display" text="Görüntü" class="settings-tab" />
+                    <ui:Button name="tab-controls" text="Kontroller" class="settings-tab" />
+                    <ui:Button name="tab-audio" text="Ses" class="settings-tab" />
+                    <ui:Button name="tab-keys" text="Tuşlar" class="settings-tab" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:ScrollView name="settings-content" class="settings-content" />
+
+            <ui:VisualElement class="settings-footer">
+                <ui:Label name="settings-hint" text="Değişiklikler anında uygulanır ve kaydedilir." class="settings-hint" />
+                <ui:VisualElement class="settings-footer-buttons">
+                    <ui:Button name="settings-reset" text="Varsayılana Döndür" class="lf-button subtle settings-footer-button" />
+                    <ui:Button name="settings-close" text="Kapat" class="lf-button primary settings-footer-button" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

@@ -37,9 +37,14 @@ namespace LandFlipper.EditorTools
         const string MainMenuUxmlPath = Root + "/UI/MainMenu/MainMenu.uxml";
         const string GameMenuUxmlPath = Root + "/UI/GameMenu/GameMenu.uxml";
         const string HudUxmlPath = Root + "/UI/HUD/Hud.uxml";
-        const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
+        const string SkillTreeUxmlPath = Root + "/UI/SkillTree/SkillTree.uxml";
+        const string SkillsFolder = Root + "/Data/Skills";
+        const string SettingsUxmlPath = Root + "/UI/Settings/Settings.uxml";
 
         const float GamePlotHalfSize = 18f;
+
+        static UnityEngine.Rendering.VolumeProfile volumeProfile;
+        static Material skyMaterial;
 
         class ResourceSet
         {
@@ -72,12 +77,17 @@ namespace LandFlipper.EditorTools
             LowPolyWorldBuilder.EnsureFolder(DataFolder);
             LowPolyWorldBuilder.EnsureFolder(CharacterMaterialsFolder);
 
+            LightingSetup.ConfigurePipeline();
+            volumeProfile = LightingSetup.CreateProfile();
+            skyMaterial = LightingSetup.CreateSkybox();
+
             var panelSettings = CreatePanelSettings();
             var kit = LowPolyWorldBuilder.LoadKit();
             var resources = CreateResources(kit);
+            var skills = CreateSkills();
             var characterVisual = CreateCharacterVisualPrefab();
             var playerPrefab = CreatePlayerPrefab(characterVisual, playerLayer);
-            CreateGameScene(panelSettings, kit, resources);
+            CreateGameScene(panelSettings, kit, resources, skills);
             CreateMainMenuScene(panelSettings, playerPrefab, characterVisual, kit, resources);
 
             EditorBuildSettings.scenes = new[]
@@ -114,12 +124,22 @@ namespace LandFlipper.EditorTools
             return settings;
         }
 
+        static void AddSettingsDocument(GameObject uiRoot, PanelSettings panelSettings)
+        {
+            var settingsGo = new GameObject("Settings");
+            settingsGo.transform.SetParent(uiRoot.transform, false);
+            AddDocument(settingsGo, panelSettings, SettingsUxmlPath, 20);
+            settingsGo.AddComponent<SettingsController>();
+        }
+
         static UIDocument AddDocument(GameObject go, PanelSettings settings, string uxmlPath, int sortingOrder)
         {
             var doc = go.AddComponent<UIDocument>();
-            // Editor'da panelSettings özelliği her zaman serileştirilmiyor; alanı doğrudan yaz.
+            // Kurulum sırasında yapılan asset işlemleri eldeki referansı geçersiz kılabiliyor
+            // (sahneye boş yazılıyordu); bu yüzden PanelSettings'i her seferinde diskten yükle.
+            var freshSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
             var so = new SerializedObject(doc);
-            so.FindProperty("m_PanelSettings").objectReferenceValue = settings;
+            so.FindProperty("m_PanelSettings").objectReferenceValue = freshSettings;
             so.FindProperty("sourceAsset").objectReferenceValue = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(uxmlPath);
             so.FindProperty("m_SortingOrder").floatValue = sortingOrder;
             so.ApplyModifiedPropertiesWithoutUndo();
@@ -132,10 +152,12 @@ namespace LandFlipper.EditorTools
         {
             var set = new ResourceSet
             {
-                GrassBale = Definition("RD_GrassBale", "grass_bale", "Çim Balyası", 4, 1, 0.31f, Vector3.zero),
-                RockChunk = Definition("RD_RockChunk", "rock_chunk", "Taş", 6, 1, 0.3f, Vector3.zero),
-                Log = Definition("RD_Log", "log", "Kütük", 15, 2, 0.36f, new Vector3(0f, 90f, 0f)),
-                Plank = Definition("RD_Plank", "plank", "Tahta", 8, 1, 0.1f, new Vector3(0f, 90f, 0f))
+                // stackHeight = nesnenin gerçek yüksekliği (elde boşluksuz üst üste dizilsin)
+                GrassBale = Definition("RD_GrassBale", "grass_bale", "Çim Balyası", 4, 1, 0.29f, Vector3.zero),
+                RockChunk = Definition("RD_RockChunk", "rock_chunk", "Taş", 6, 1, 0.24f, Vector3.zero),
+                // Tek elde taşındığı için uzun nesneler ileri doğru durur.
+                Log = Definition("RD_Log", "log", "Kütük", 15, 2, 0.33f, Vector3.zero),
+                Plank = Definition("RD_Plank", "plank", "Tahta", 8, 1, 0.085f, Vector3.zero)
             };
 
             set.Prefabs.Add(CreatePickupPrefab("Pickup_Plank", set.Plank, 4f, visual =>
@@ -171,6 +193,59 @@ namespace LandFlipper.EditorTools
             }));
 
             return set;
+        }
+
+        // ---------------------------------------------------------------- Skills
+
+        static SkillDefinition[] CreateSkills()
+        {
+            LowPolyWorldBuilder.EnsureFolder(SkillsFolder);
+
+            var arms = Skill("SK_CarryArms", "carry_arms", "Güçlü Kollar", "Elinde daha fazla kaynak taşı.",
+                "carry", "Taşıma", 0, "K", SkillStat.CarryCapacity, 1f, 4, null, 1);
+            var basket = Skill("SK_CarryBasket", "carry_basket", "Sırt Sepeti", "Sırtına bağladığın sepetle yükünü büyüt.",
+                "carry", "Taşıma", 1, "S", SkillStat.CarryCapacity, 1f, 2, arms, 2);
+
+            var light = Skill("SK_MoveLight", "move_light", "Hafif Adım", "Arazide daha hızlı yürü ve koş.",
+                "move", "Hareket", 0, "H", SkillStat.MoveSpeed, 0.08f, 3, null, 1);
+            var sprint = Skill("SK_MoveSprint", "move_sprint", "Koşucu", "Koşarken çok daha hızlı ilerle.",
+                "move", "Hareket", 1, "R", SkillStat.SprintSpeed, 0.12f, 3, light, 1);
+
+            var hands = Skill("SK_GatherHands", "gather_hands", "Seri Eller", "Biçme, kesme ve kırma vuruşların hızlanır.",
+                "gather", "Toplama", 0, "E", SkillStat.HitSpeed, 0.12f, 3, null, 1);
+
+            var trader = Skill("SK_YieldTrader", "yield_trader", "Pazarlıkçı", "Tezgâhta kaynaklarını daha iyi fiyata sat.",
+                "yield", "Verim", 0, "P", SkillStat.SellBonus, 0.06f, 3, null, 1);
+
+            return new[] { arms, basket, light, sprint, hands, trader };
+        }
+
+        static SkillDefinition Skill(string asset, string id, string name, string description, string branchId, string branchName,
+            int order, string icon, SkillStat stat, float value, int maxLevel, SkillDefinition prerequisite, int prerequisiteLevel)
+        {
+            string path = $"{SkillsFolder}/{asset}.asset";
+            var skill = AssetDatabase.LoadAssetAtPath<SkillDefinition>(path);
+            if (skill == null)
+            {
+                skill = ScriptableObject.CreateInstance<SkillDefinition>();
+                AssetDatabase.CreateAsset(skill, path);
+                // denge değerlerini sadece ilk oluşturmada yaz; sonra Inspector'dan ayarlanır
+                skill.valuePerLevel = value;
+                skill.maxLevel = maxLevel;
+                skill.costPerLevel = 1;
+            }
+            skill.id = id;
+            skill.displayName = name;
+            skill.description = description;
+            skill.branchId = branchId;
+            skill.branchName = branchName;
+            skill.branchOrder = order;
+            skill.iconText = icon;
+            skill.stat = stat;
+            skill.prerequisite = prerequisite;
+            skill.prerequisiteLevel = prerequisiteLevel;
+            EditorUtility.SetDirty(skill);
+            return skill;
         }
 
         static ResourceDefinition Definition(string asset, string id, string displayName, int price, int slots, float stackHeight, Vector3 carryEuler)
@@ -316,16 +391,17 @@ namespace LandFlipper.EditorTools
             cam.nearClipPlane = 0.05f;
             cam.fieldOfView = 75f;
             cameraGo.AddComponent<AudioListener>();
+            LightingSetup.ConfigureCamera(cam); // post-processing + SMAA
 
-            // Gövde önü: diğer oyuncular yükü göğüs hizasında, kollar arasında görür.
+            // Gövdenin sağ önü: diğer oyuncular yükü sağ avuçta, göğüs hizasında görür.
             var carryAnchor = new GameObject("CarryAnchor");
             carryAnchor.transform.SetParent(player.transform, false);
-            carryAnchor.transform.localPosition = new Vector3(0f, 0.98f, 0.42f);
+            carryAnchor.transform.localPosition = new Vector3(0.24f, 1.12f, 0.36f);
 
-            // Birinci şahıs: ekranın alt ortasında, küçültülmüş ve görüşü kapatmayacak kadar aşağıda.
+            // Birinci şahıs: sağ elin uzanabileceği mesafede, ekranın sağ altında, küçültülmüş.
             var viewAnchor = new GameObject("CarryViewAnchor");
             viewAnchor.transform.SetParent(pivot.transform, false);
-            viewAnchor.transform.localPosition = new Vector3(0f, -0.75f, 1.1f);
+            viewAnchor.transform.localPosition = new Vector3(0.17f, -0.3f, 0.46f);
 
             player.AddComponent<NetworkIdentity>();
 
@@ -337,7 +413,6 @@ namespace LandFlipper.EditorTools
             var controller = player.AddComponent<FirstPersonController>();
             controller.syncDirection = SyncDirection.ClientToServer; // bakış eğimi SyncVar'ı
             var so = new SerializedObject(controller);
-            so.FindProperty("inputActions").objectReferenceValue = AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath);
             so.FindProperty("cameraPivot").objectReferenceValue = pivot.transform;
             so.FindProperty("playerCamera").objectReferenceValue = cam;
             so.FindProperty("characterAnimator").objectReferenceValue = animator;
@@ -347,7 +422,23 @@ namespace LandFlipper.EditorTools
                 renderers.GetArrayElementAtIndex(i).objectReferenceValue = bodyRenderers[i];
             so.ApplyModifiedPropertiesWithoutUndo();
 
-            player.AddComponent<PlayerCarry>().EditorSetup(carryAnchor.transform, viewAnchor.transform, animator);
+            var playerCarry = player.AddComponent<PlayerCarry>();
+            playerCarry.EditorSetup(carryAnchor.transform, viewAnchor.transform, animator);
+
+            // Birinci şahıs kolları: karakterin ikinci kopyası, omuzlar kameranın hemen altında/önünde.
+            // Gövde kameranın arkasında kalır; baş ve bacaklar FirstPersonArms tarafından gizlenir.
+            var arms = (GameObject)PrefabUtility.InstantiatePrefab(characterVisualPrefab);
+            arms.name = "FirstPersonArms";
+            arms.transform.SetParent(pivot.transform, false);
+            arms.transform.localPosition = new Vector3(0f, -1.70f, 0.13f);
+            Object.DestroyImmediate(arms.GetComponent<ProceduralCharacterAnimator>());
+            foreach (var smr in arms.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                smr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                smr.updateWhenOffscreen = true;
+            }
+            arms.AddComponent<FirstPersonArms>().EditorSetup(controller, playerCarry, viewAnchor.transform);
+            player.AddComponent<PlayerSkills>();
             var interactor = player.AddComponent<PlayerInteractor>();
             interactor.EditorSetMask(~((1 << playerLayer) | (1 << 2)));
 
@@ -373,12 +464,14 @@ namespace LandFlipper.EditorTools
                     root.name = "Menu Camera";
                     cam.fieldOfView = 45f;
                     root.AddComponent<MenuCameraOrbit>();
+                    LightingSetup.ConfigureCamera(cam);
                 }
                 else if (root.TryGetComponent<Light>(out var light))
                 {
-                    LowPolyWorldBuilder.ApplyCozyLighting(light);
+                    LightingSetup.ApplySceneLighting(light, skyMaterial);
                 }
             }
+            LightingSetup.AddGlobalVolume(volumeProfile);
 
             LowPolyWorldBuilder.BuildPlot("MenuDiorama", new LowPolyWorldBuilder.PlotSettings
             {
@@ -419,11 +512,12 @@ namespace LandFlipper.EditorTools
             uiGo.transform.SetParent(uiRoot.transform, false);
             AddDocument(uiGo, panelSettings, MainMenuUxmlPath, 0);
             uiGo.AddComponent<MainMenuController>();
+            AddSettingsDocument(uiRoot, panelSettings);
 
             EditorSceneManager.SaveScene(scene, MainMenuScenePath);
         }
 
-        static void CreateGameScene(PanelSettings panelSettings, LowPolyWorldBuilder.Kit kit, ResourceSet resources)
+        static void CreateGameScene(PanelSettings panelSettings, LowPolyWorldBuilder.Kit kit, ResourceSet resources, SkillDefinition[] skills)
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 
@@ -432,8 +526,9 @@ namespace LandFlipper.EditorTools
                 if (root.GetComponent<Camera>() != null)
                     Object.DestroyImmediate(root); // kamera oyuncu prefab'ında
                 else if (root.TryGetComponent<Light>(out var light))
-                    LowPolyWorldBuilder.ApplyCozyLighting(light);
+                    LightingSetup.ApplySceneLighting(light, skyMaterial);
             }
+            LightingSetup.AddGlobalVolume(volumeProfile);
 
             float h = GamePlotHalfSize;
             Vector3 entrance = new Vector3(0f, 0f, -h + 3f);
@@ -460,7 +555,7 @@ namespace LandFlipper.EditorTools
             var plotNetwork = new GameObject("PlotNetwork");
             plotNetwork.AddComponent<NetworkIdentity>();
             plotNetwork.AddComponent<PlotWorld>().EditorSetup(h, 1, resources.Log, resources.RockChunk, resources.GrassBale, resources.Plank);
-            plotNetwork.AddComponent<CareerState>();
+            plotNetwork.AddComponent<CareerState>().EditorSetSkills(skills);
 
             var spawnRoot = new GameObject("SpawnPoints");
             Vector3[] offsets =
@@ -483,10 +578,16 @@ namespace LandFlipper.EditorTools
             AddDocument(hudGo, panelSettings, HudUxmlPath, 0);
             hudGo.AddComponent<HudController>();
 
+            var skillTreeGo = new GameObject("SkillTree");
+            skillTreeGo.transform.SetParent(uiRoot.transform, false);
+            AddDocument(skillTreeGo, panelSettings, SkillTreeUxmlPath, 5);
+            skillTreeGo.AddComponent<SkillTreeController>();
+
             var menuGo = new GameObject("GameMenu");
             menuGo.transform.SetParent(uiRoot.transform, false);
             AddDocument(menuGo, panelSettings, GameMenuUxmlPath, 10);
             menuGo.AddComponent<GameMenuController>();
+            AddSettingsDocument(uiRoot, panelSettings);
 
             EditorSceneManager.SaveScene(scene, GameScenePath);
         }
@@ -498,6 +599,7 @@ namespace LandFlipper.EditorTools
         static void RelinkPanelSettings(string scenePath, PanelSettings settings)
         {
             var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+            settings = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath); // taze referans
             int docCount = 0;
             foreach (var root in scene.GetRootGameObjects())
             foreach (var doc in root.GetComponentsInChildren<UIDocument>(true))

@@ -1,0 +1,273 @@
+/* Land Flipper - Ayarlar ekranı (UI Toolkit) */
+
+.settings-overlay {
+    background-color: rgba(18, 24, 16, 0.75);
+}
+
+.settings-panel {
+    width: 1040px;
+    max-width: 94%;
+    height: 760px;
+    max-height: 92%;
+    padding: 28px 32px 22px 32px;
+    border-radius: 22px;
+    background-color: rgb(244, 235, 217);
+    border-width: 3px;
+    border-color: rgb(217, 203, 176);
+}
+
+/* ---------- başlık + sekmeler ---------- */
+.settings-header {
+    flex-direction: row;
+    align-items: center;
+    padding-bottom: 18px;
+    margin-bottom: 14px;
+    border-bottom-width: 2px;
+    border-color: rgb(217, 203, 176);
+}
+
+.settings-title {
+    font-size: 36px;
+    -unity-font-style: bold;
+    color: rgb(59, 47, 37);
+    letter-spacing: 2px;
+    flex-grow: 1;
+}
+
+.settings-tabs {
+    flex-direction: row;
+    padding: 5px;
+    border-radius: 14px;
+    background-color: rgb(232, 220, 195);
+}
+
+.settings-tab {
+    height: 40px;
+    min-width: 120px;
+    margin: 0 2px;
+    font-size: 16px;
+    -unity-font-style: bold;
+    border-radius: 10px;
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgb(122, 106, 88);
+    transition-duration: 0.12s;
+}
+
+.settings-tab:hover {
+    background-color: rgb(244, 235, 217);
+    color: rgb(59, 47, 37);
+}
+
+.settings-tab.active {
+    background-color: rgb(94, 140, 74);
+    color: rgb(255, 253, 246);
+}
+
+/* ---------- içerik ---------- */
+.settings-content {
+    flex-grow: 1;
+}
+
+.settings-section {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: rgb(150, 132, 110);
+    letter-spacing: 1px;
+    margin: 16px 4px 6px 4px;
+}
+
+.settings-row {
+    flex-direction: row;
+    align-items: center;
+    min-height: 54px;
+    padding: 6px 16px;
+    margin: 3px 0;
+    border-radius: 12px;
+    background-color: rgb(250, 244, 231);
+}
+
+.settings-row:hover {
+    background-color: rgb(255, 250, 240);
+}
+
+.settings-row-label {
+    width: 300px;
+    font-size: 17px;
+    color: rgb(59, 47, 37);
+}
+
+.settings-row-sub {
+    font-size: 13px;
+    color: rgb(150, 132, 110);
+    white-space: normal;
+}
+
+.settings-row-control {
+    flex-grow: 1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.settings-value {
+    width: 70px;
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: rgb(94, 140, 74);
+    -unity-text-align: middle-right;
+}
+
+/* ---------- slider ---------- */
+.lf-slider {
+    flex-grow: 1;
+    max-width: 420px;
+    margin: 0 10px;
+}
+
+.lf-slider #unity-tracker {
+    height: 8px;
+    margin-top: -4px;
+    border-radius: 4px;
+    border-width: 0;
+    background-color: rgb(225, 212, 186);
+}
+
+.lf-slider #unity-dragger {
+    width: 20px;
+    height: 20px;
+    margin-top: -10px;
+    border-radius: 10px;
+    border-width: 3px;
+    border-color: rgb(255, 253, 246);
+    background-color: rgb(94, 140, 74);
+}
+
+.lf-slider #unity-dragger-border {
+    display: none;
+}
+
+/* ---------- açma/kapama (pill) ---------- */
+.lf-switch {
+    width: 120px;
+    height: 36px;
+    border-radius: 18px;
+    border-width: 0;
+    font-size: 14px;
+    -unity-font-style: bold;
+    background-color: rgb(225, 212, 186);
+    color: rgb(122, 106, 88);
+    transition-duration: 0.12s;
+}
+
+.lf-switch.on {
+    background-color: rgb(94, 140, 74);
+    color: rgb(255, 253, 246);
+}
+
+/* ---------- seçici ( ‹ değer › ) ---------- */
+.lf-stepper {
+    flex-direction: row;
+    align-items: center;
+}
+
+.lf-stepper-arrow {
+    width: 36px;
+    height: 36px;
+    border-radius: 18px;
+    border-width: 0;
+    font-size: 18px;
+    -unity-font-style: bold;
+    background-color: rgb(232, 220, 195);
+    color: rgb(59, 47, 37);
+}
+
+.lf-stepper-arrow:hover {
+    background-color: rgb(217, 203, 176);
+}
+
+.lf-stepper-value {
+    width: 220px;
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: rgb(59, 47, 37);
+    -unity-text-align: middle-center;
+}
+
+/* ---------- tuş atama ---------- */
+.key-button {
+    min-width: 150px;
+    height: 40px;
+    border-radius: 10px;
+    border-width: 2px;
+    border-color: rgb(217, 203, 176);
+    font-size: 16px;
+    -unity-font-style: bold;
+    background-color: rgb(255, 253, 246);
+    color: rgb(59, 47, 37);
+    transition-duration: 0.1s;
+}
+
+.key-button:hover {
+    border-color: rgb(94, 140, 74);
+}
+
+.key-button.listening {
+    border-color: rgb(240, 190, 60);
+    background-color: rgb(255, 240, 190);
+    color: rgb(150, 100, 20);
+}
+
+.key-button.conflict {
+    border-color: rgb(181, 83, 60);
+    color: rgb(181, 83, 60);
+}
+
+.key-reset {
+    width: 40px;
+    height: 40px;
+    margin-left: 8px;
+    border-radius: 10px;
+    border-width: 0;
+    font-size: 18px;
+    -unity-font-style: bold;
+    background-color: rgb(232, 220, 195);
+    color: rgb(122, 106, 88);
+}
+
+.key-reset:hover {
+    background-color: rgb(217, 203, 176);
+    color: rgb(59, 47, 37);
+}
+
+.key-conflict-label {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: rgb(181, 83, 60);
+    margin-right: 12px;
+}
+
+/* ---------- alt ---------- */
+.settings-footer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top-width: 2px;
+    border-color: rgb(217, 203, 176);
+}
+
+.settings-hint {
+    font-size: 14px;
+    color: rgb(122, 106, 88);
+}
+
+.settings-footer-buttons {
+    flex-direction: row;
+}
+
+.settings-footer-button {
+    min-width: 170px;
+    margin: 0 0 0 10px;
+}

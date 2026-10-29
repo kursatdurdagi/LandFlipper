@@ -11,6 +11,7 @@
 
             <ui:VisualElement name="menu-panel" class="panel">
                 <ui:Button name="resume-button" text="Devam Et" class="lf-button primary" />
+                <ui:Button name="settings-button" text="Ayarlar" class="lf-button" />
                 <ui:Button name="leave-button" text="Ana Menüye Dön" class="lf-button" />
                 <ui:Button name="quit-button" text="Masaüstüne Çık" class="lf-button subtle" />
             </ui:VisualElement>

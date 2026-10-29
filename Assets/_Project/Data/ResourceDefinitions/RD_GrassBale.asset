@@ -16,6 +16,6 @@ MonoBehaviour:
   displayName: "\xC7im Balyas\u0131"
   sellPrice: 4
   slotCost: 1
-  stackHeight: 0.31
+  stackHeight: 0.29
   carryEuler: {x: 0, y: 0, z: 0}
   prefab: {fileID: 8518127340284624727, guid: 51cb5bb009c2e514aafebc1371d3c2ad, type: 3}

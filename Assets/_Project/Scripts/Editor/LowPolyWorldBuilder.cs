@@ -492,8 +492,12 @@ namespace LandFlipper.EditorTools
             targetArea.center = new Vector3(0f, 1.4f, -0.2f);
             targetArea.size = new Vector3(4.2f, 2.8f, 2.6f);
 
+            var intake = new GameObject("IntakePoint");
+            intake.transform.SetParent(t, false);
+            intake.transform.localPosition = new Vector3(0f, 1.3f, -0.75f);
+
             var station = stall.AddComponent<SellStation>();
-            station.EditorSetup(sign.transform);
+            station.EditorSetup(sign.transform, intake.transform);
 
             foreach (var tr in stall.GetComponentsInChildren<Transform>(true))
                 if (!tr.IsChildOf(sign.transform))

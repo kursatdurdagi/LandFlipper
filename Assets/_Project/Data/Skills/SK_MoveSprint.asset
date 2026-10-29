@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a13cd5ccd7acd44d9054e5539cf9e3c, type: 3}
+  m_Name: SK_MoveSprint
+  m_EditorClassIdentifier: Assembly-CSharp::LandFlipper.Gameplay.SkillDefinition
+  id: move_sprint
+  displayName: "Ko\u015Fucu"
+  description: "Ko\u015Farken \xE7ok daha h\u0131zl\u0131 ilerle."
+  branchId: move
+  branchName: Hareket
+  branchOrder: 1
+  iconText: R
+  stat: 1
+  valuePerLevel: 0.12
+  maxLevel: 3
+  costPerLevel: 1
+  prerequisite: {fileID: 11400000, guid: 9872b08efdbce1d49b394b48798c17c8, type: 2}
+  prerequisiteLevel: 1

@@ -6,13 +6,13 @@ using UnityEngine.UIElements;
 namespace LandFlipper.UI
 {
     /// <summary>
-    /// Ana menü (UI Toolkit): Tek Oyunculu, Co-op (Host / Katıl), Çıkış.
+    /// Ana menü (UI Toolkit): Tek Oyunculu, Co-op (Host / Katıl), Ayarlar, Çıkış.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     public class MainMenuController : MonoBehaviour
     {
         VisualElement mainPanel, coopPanel, busyPanel;
-        Button singleButton, coopButton, quitButton, hostButton, joinButton, backButton, cancelButton;
+        Button singleButton, coopButton, settingsButton, quitButton, hostButton, joinButton, backButton, cancelButton;
         TextField portField, addressField;
         Label statusLabel, busyLabel;
 
@@ -25,6 +25,7 @@ namespace LandFlipper.UI
             busyPanel = root.Q("busy-panel");
             singleButton = root.Q<Button>("single-button");
             coopButton = root.Q<Button>("coop-button");
+            settingsButton = root.Q<Button>("settings-button");
             quitButton = root.Q<Button>("quit-button");
             hostButton = root.Q<Button>("host-button");
             joinButton = root.Q<Button>("join-button");
@@ -37,6 +38,7 @@ namespace LandFlipper.UI
 
             singleButton.clicked += OnSingleClicked;
             coopButton.clicked += OnCoopClicked;
+            if (settingsButton != null) settingsButton.clicked += OnSettingsClicked;
             quitButton.clicked += OnQuitClicked;
             hostButton.clicked += OnHostClicked;
             joinButton.clicked += OnJoinClicked;
@@ -60,6 +62,7 @@ namespace LandFlipper.UI
         {
             singleButton.clicked -= OnSingleClicked;
             coopButton.clicked -= OnCoopClicked;
+            if (settingsButton != null) settingsButton.clicked -= OnSettingsClicked;
             quitButton.clicked -= OnQuitClicked;
             hostButton.clicked -= OnHostClicked;
             joinButton.clicked -= OnJoinClicked;
@@ -67,6 +70,8 @@ namespace LandFlipper.UI
             cancelButton.clicked -= OnCancelClicked;
             SessionContext.MessagePosted -= OnSessionMessage;
         }
+
+        void OnSettingsClicked() => SettingsController.Instance?.Open();
 
         LFNetworkManager Manager
         {

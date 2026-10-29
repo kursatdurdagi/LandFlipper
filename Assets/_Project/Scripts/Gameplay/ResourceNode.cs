@@ -41,6 +41,12 @@ namespace LandFlipper.Gameplay
         public bool IsDepleted { get; private set; }
         public int HitsTaken { get; private set; }
 
+        /// <summary>
+        /// 0 ise tıklama ile vurulur. 0'dan büyükse oyuncu bu kadar saniye basılı tutmalıdır
+        /// (ör. başlangıç aletleriyle çim biçmek zaman alır). Yetenek/aletler bu süreyi kısaltır.
+        /// </summary>
+        public virtual float HoldDuration => 0f;
+
         public abstract NodeKind Kind { get; }
         public abstract string ActionVerb { get; }
         public abstract string DisplayName { get; }

@@ -14,6 +14,10 @@ namespace LandFlipper.Gameplay
 
         [SerializeField] float interactRadius = 4.5f;
         [SerializeField] Transform bounceTarget;
+        [Tooltip("Satılan kaynakların uçtuğu nokta (tezgâh üstü).")]
+        [SerializeField] Transform intakePoint;
+
+        public Vector3 IntakePosition => intakePoint != null ? intakePoint.position : transform.position + Vector3.up * 1.2f;
 
         Vector3 bounceRestScale;
         Coroutine bounceRoutine;
@@ -64,7 +68,11 @@ namespace LandFlipper.Gameplay
         }
 
 #if UNITY_EDITOR
-        public void EditorSetup(Transform bounce) => bounceTarget = bounce;
+        public void EditorSetup(Transform bounce, Transform intake)
+        {
+            bounceTarget = bounce;
+            intakePoint = intake;
+        }
 #endif
     }
 }

@@ -9,6 +9,7 @@
             <ui:VisualElement name="main-panel" class="panel">
                 <ui:Button name="single-button" text="Tek Oyunculu" class="lf-button primary" />
                 <ui:Button name="coop-button" text="Co-op" class="lf-button" />
+                <ui:Button name="settings-button" text="Ayarlar" class="lf-button" />
                 <ui:Button name="quit-button" text="Çıkış" class="lf-button subtle" />
             </ui:VisualElement>
 

@@ -31,6 +31,33 @@ namespace LandFlipper.Player
         bool dropAllTriggered;
         double serverNextHitTime;
 
+        // basılı tutarak biçme (çim vb.)
+        ResourceNode holdNode;
+        float holdTime;
+        float nextHoldFeedback;
+        int serverHoldId = -1;
+        double serverHoldStart;
+
+        // satış: E tek basış = 1 kaynak, basılı tutma = hızlanan tempoyla tek tek
+        [Header("Selling")]
+        [SerializeField] float sellFirstInterval = 0.38f;
+        [SerializeField] float sellMinInterval = 0.12f;
+        [SerializeField] float sellAcceleration = 0.78f;
+        [Tooltip("Para, kaynak tezgâha ulaştığında eklenir (uçuş süresiyle uyumlu).")]
+        [SerializeField] float sellMoneyDelay = 0.4f;
+        bool sellHolding;
+        float nextSellTime;
+        float sellInterval;
+
+        CharacterController characterController;
+        bool serverDropAllRunning;
+
+        /// <summary>0-1 arası basılı tutma ilerlemesi; basılı tutulmuyorsa 0. HUD halkası bunu çizer.</summary>
+        public float HoldProgress { get; private set; }
+
+        /// <summary>"Toplama" yetenekleriyle kısalan vuruş bekleme süresi.</summary>
+        float EffectiveHitCooldown => hitCooldown / (1f + CareerState.Stat(SkillStat.HitSpeed));
+
         public ResourceNode TargetNode { get; private set; }
         public Pickup TargetPickup { get; private set; }
         public SellStation TargetStation { get; private set; }
@@ -43,26 +70,23 @@ namespace LandFlipper.Player
         {
             controller = GetComponent<FirstPersonController>();
             carry = GetComponent<PlayerCarry>();
+            characterController = GetComponent<CharacterController>();
         }
 
         public override void OnStartLocalPlayer()
         {
-            primaryAction = new InputAction("Primary", InputActionType.Button, "<Mouse>/leftButton");
-            primaryAction.AddBinding("<Gamepad>/rightTrigger");
-            interactAction = new InputAction("Interact", InputActionType.Button, "<Keyboard>/e");
-            interactAction.AddBinding("<Gamepad>/buttonWest");
-            dropAction = new InputAction("Drop", InputActionType.Button, "<Keyboard>/r");
-            dropAction.AddBinding("<Gamepad>/buttonEast");
-            primaryAction.Enable();
-            interactAction.Enable();
-            dropAction.Enable();
+            // Değiştirilebilir tuşlar merkezi LFInput'tan gelir (Ayarlar → Tuşlar).
+            LFInput.EnsureCreated();
+            primaryAction = LFInput.Primary;
+            interactAction = LFInput.Interact;
+            dropAction = LFInput.Drop;
         }
 
         public override void OnStopLocalPlayer()
         {
-            primaryAction?.Dispose();
-            interactAction?.Dispose();
-            dropAction?.Dispose();
+            primaryAction = null;
+            interactAction = null;
+            dropAction = null;
         }
 
         void Update()
@@ -72,6 +96,8 @@ namespace LandFlipper.Player
             if (InputGate.IsBlocked)
             {
                 ClearTarget();
+                ResetHold();
+                sellHolding = false;
                 dropPressedAt = -1f;
                 return;
             }
@@ -80,7 +106,9 @@ namespace LandFlipper.Player
             Prompt = BuildPrompt();
 
             if (primaryAction.WasPressedThisFrame()) OnPrimary();
+            UpdateHold();
             if (interactAction.WasPressedThisFrame()) OnInteract();
+            UpdateSellHold();
             HandleDrop();
         }
 
@@ -161,30 +189,37 @@ namespace LandFlipper.Player
 
         string BuildPrompt()
         {
+            // Tuş adları oyuncunun atamalarından gelir (Ayarlar → Tuşlar)
+            string interactKey = LFInput.KeyLabel(LFInput.Interact);
+            string dropKey = LFInput.KeyLabel(LFInput.Drop);
+            string primaryKey = LFInput.KeyLabel(LFInput.Primary);
+
             if (TargetPickup != null)
             {
                 var def = TargetPickup.Definition;
                 return carry.HasRoomFor(TargetPickup)
-                    ? $"[E] Al · {def.displayName} ({Currency.Format(def.sellPrice)})"
-                    : $"Yük dolu ({carry.UsedSlots}/{carry.CapacitySlots}) · [R] Bırak";
+                    ? $"[{interactKey}] Al · {def.displayName} ({Currency.Format(CareerState.SellPrice(def))})"
+                    : $"Yük dolu ({carry.UsedSlots}/{carry.CapacitySlots}) · [{dropKey}] Bırak";
             }
 
             if (TargetStation != null)
             {
                 if (!carry.IsCarrying) return "Satış Tezgâhı · Satmak için kaynak getir";
                 int total = 0;
-                foreach (var item in carry.Items) total += item.Definition.sellPrice;
-                return $"[E] Sat · {carry.Count} kaynak · {Currency.Format(total)}";
+                foreach (var item in carry.Items) total += CareerState.SellPrice(item.Definition);
+                return $"[{interactKey}] Sat · basılı tut: hepsi ({carry.Count} kaynak · {Currency.Format(total)})";
             }
 
             if (TargetNode != null)
             {
-                if (carry.IsCarrying) return "Elin dolu · [R] Bırak";
+                if (carry.IsCarrying) return $"Elin dolu · [{dropKey}] Bırak";
+                if (TargetNode.HoldDuration > 0f)
+                    return $"[{primaryKey} basılı tut] {TargetNode.ActionVerb} · {TargetNode.DisplayName}";
                 string progress = TargetNode.MaxHits > 1 ? $" ({TargetNode.HitsTaken}/{TargetNode.MaxHits})" : string.Empty;
-                return $"[Sol Tık] {TargetNode.ActionVerb} · {TargetNode.DisplayName}{progress}";
+                return $"[{primaryKey}] {TargetNode.ActionVerb} · {TargetNode.DisplayName}{progress}";
             }
 
-            return carry.IsCarrying ? "[R] Bırak · Basılı tut: hepsini bırak" : string.Empty;
+            return carry.IsCarrying ? $"[{dropKey}] Bırak · Basılı tut: hepsini bırak" : string.Empty;
         }
 
         // ------------------------------------------------------------ actions
@@ -197,11 +232,64 @@ namespace LandFlipper.Player
                 Notification?.Invoke("Elinde yük varken kesemez/kıramazsın. Önce R ile bırak.");
                 return;
             }
+            if (TargetNode.HoldDuration > 0f) return; // basılı tutma UpdateHold'da işlenir
             if (Time.time < nextHitTime) return;
 
-            nextHitTime = Time.time + hitCooldown;
+            nextHitTime = Time.time + EffectiveHitCooldown;
             controller.Kick(TargetNode.Kind == NodeKind.Grass ? 1.2f : 2.5f);
             CmdHit(TargetNode.ObjectId);
+        }
+
+        /// <summary>"Seri Eller" yeteneği basılı tutma süresini de kısaltır.</summary>
+        float EffectiveHoldDuration(ResourceNode node) => node.HoldDuration / (1f + CareerState.Stat(SkillStat.HitSpeed));
+
+        void UpdateHold()
+        {
+            bool holding = primaryAction.IsPressed()
+                           && TargetNode != null
+                           && TargetNode.HoldDuration > 0f
+                           && !carry.IsCarrying;
+
+            if (!holding)
+            {
+                ResetHold();
+                return;
+            }
+
+            if (holdNode != TargetNode)
+            {
+                // yeni öbeğe geçildi: sıfırdan başla (basılı tutmaya devam ederek peş peşe biçilebilir)
+                holdNode = TargetNode;
+                holdTime = 0f;
+                nextHoldFeedback = 0f;
+                CmdBeginHold(holdNode.ObjectId);
+            }
+
+            float duration = EffectiveHoldDuration(holdNode);
+            holdTime += Time.deltaTime;
+            HoldProgress = Mathf.Clamp01(holdTime / duration);
+
+            // makas hissi: düzenli küçük sarsıntı ve çimen kıpırtısı
+            if (holdTime >= nextHoldFeedback)
+            {
+                nextHoldFeedback = holdTime + 0.28f;
+                controller.Kick(0.5f);
+                holdNode.PlayHitFeedback();
+            }
+
+            if (holdTime >= duration)
+            {
+                controller.Kick(1.4f);
+                CmdHit(holdNode.ObjectId);
+                ResetHold();
+            }
+        }
+
+        void ResetHold()
+        {
+            holdNode = null;
+            holdTime = 0f;
+            HoldProgress = 0f;
         }
 
         void OnInteract()
@@ -217,8 +305,33 @@ namespace LandFlipper.Player
             }
             else if (TargetStation != null)
             {
-                if (carry.IsCarrying) CmdSell();
+                if (carry.IsCarrying) StartSellSession();
                 else Notification?.Invoke("Satacak bir şey taşımıyorsun.");
+            }
+        }
+
+        void StartSellSession()
+        {
+            sellHolding = true;
+            sellInterval = sellFirstInterval;
+            nextSellTime = Time.time + sellInterval;
+            CmdSellOne();
+        }
+
+        void UpdateSellHold()
+        {
+            if (!sellHolding) return;
+            if (!interactAction.IsPressed() || TargetStation == null || !carry.IsCarrying)
+            {
+                sellHolding = false;
+                return;
+            }
+
+            if (Time.time >= nextSellTime)
+            {
+                CmdSellOne();
+                sellInterval = Mathf.Max(sellMinInterval, sellInterval * sellAcceleration); // tık... tık.. tık.tık
+                nextSellTime = Time.time + sellInterval;
             }
         }
 
@@ -253,15 +366,34 @@ namespace LandFlipper.Player
         }
 
         [Command]
+        void CmdBeginHold(int objectId)
+        {
+            serverHoldId = objectId;
+            serverHoldStart = NetworkTime.time;
+        }
+
+        [Command]
         void CmdHit(int objectId)
         {
             if (carry.IsCarrying) return;
-            if (NetworkTime.time < serverNextHitTime) return;
             var world = PlotWorld.Instance;
             if (world == null || !world.TryGetNode(objectId, out var node)) return;
             if (!ServerInRange(node.transform.position)) return;
 
-            serverNextHitTime = NetworkTime.time + hitCooldown * 0.8f;
+            if (node.HoldDuration > 0f)
+            {
+                // Basılı tutma süresi host'ta doğrulanır (gecikme payı ile).
+                bool heldLongEnough = serverHoldId == objectId &&
+                                      NetworkTime.time - serverHoldStart >= EffectiveHoldDuration(node) * 0.7f;
+                serverHoldId = -1;
+                if (!heldLongEnough) return;
+            }
+            else
+            {
+                if (NetworkTime.time < serverNextHitTime) return;
+                serverNextHitTime = NetworkTime.time + EffectiveHitCooldown * 0.8f;
+            }
+
             world.ServerApplyHit(objectId, transform.position);
         }
 
@@ -275,51 +407,96 @@ namespace LandFlipper.Player
                 TargetNotify(connectionToClient, "Taşıma kapasiten dolu.");
         }
 
+        // ------------------------------------------------------------ bırakma (fırlatma)
+
         [Command]
         void CmdDropTop()
         {
             var pickup = carry.ServerRemoveTop();
-            if (pickup != null) ServerPlace(pickup, 0);
+            if (pickup != null) ServerToss(pickup);
         }
 
         [Command]
         void CmdDropAll()
         {
-            var items = carry.ServerTakeAll();
-            for (int i = 0; i < items.Count; i++) ServerPlace(items[i], i);
+            if (!serverDropAllRunning) StartCoroutine(ServerDropAllRoutine());
+        }
+
+        System.Collections.IEnumerator ServerDropAllRoutine()
+        {
+            // üstten başlayarak tek tek, kısa aralıklarla fırlat
+            serverDropAllRunning = true;
+            while (true)
+            {
+                var pickup = carry.ServerRemoveTop();
+                if (pickup == null) break;
+                ServerToss(pickup);
+                yield return new WaitForSeconds(0.09f);
+            }
+            serverDropAllRunning = false;
         }
 
         [Server]
-        void ServerPlace(Pickup pickup, int index)
+        void ServerToss(Pickup pickup)
         {
             Vector3 forward = transform.forward;
-            Vector3 position = transform.position + forward * 1.0f + Vector3.up * (0.7f + index * 0.35f)
-                               + transform.right * UnityEngine.Random.Range(-0.15f, 0.15f);
-            Quaternion rotation = Quaternion.Euler(0f, transform.eulerAngles.y + pickup.Definition.carryEuler.y, 0f);
-            pickup.ServerDrop(position, rotation, forward * 0.8f);
+            Vector3 start = pickup.transform.position; // şu an elde durduğu yer
+            if ((start - transform.position).sqrMagnitude > 9f)
+                start = transform.position + forward * 0.8f + Vector3.up * 1.1f;
+
+            Vector3 impulse = forward * UnityEngine.Random.Range(2.0f, 2.8f)
+                              + Vector3.up * UnityEngine.Random.Range(1.6f, 2.3f)
+                              + transform.right * UnityEngine.Random.Range(-0.5f, 0.5f);
+            Vector3 spin = UnityEngine.Random.insideUnitSphere * 6f;
+            pickup.ServerDrop(start, pickup.transform.rotation, impulse, spin, characterController);
         }
 
+        // ------------------------------------------------------------ satış (tek tek)
+
         [Command]
-        void CmdSell()
+        void CmdSellOne()
         {
             var station = SellStation.FindInRange(transform.position);
-            if (station == null || CareerState.Instance == null)
+            var career = CareerState.Instance;
+            if (station == null || career == null)
             {
                 TargetNotify(connectionToClient, "Satış tezgâhına daha yakın olmalısın.");
                 return;
             }
 
-            var items = carry.ServerTakeAll();
-            int total = 0;
-            foreach (var item in items)
+            var item = carry.ServerRemoveTop();
+            if (item == null) return;
+
+            int price = CareerState.SellPrice(item.Definition); // "Verim" satış bonusu dahil
+            var t = item.transform;
+            RpcSellFx(item.netId, item.Definition.id, t.position, t.rotation, t.localScale.x, station.IntakePosition, price);
+            NetworkServer.Destroy(item.gameObject);
+            StartCoroutine(AddMoneyDelayed(price));
+        }
+
+        System.Collections.IEnumerator AddMoneyDelayed(int amount)
+        {
+            yield return new WaitForSeconds(sellMoneyDelay); // kaynak tezgâha ulaştığında "tık"
+            if (CareerState.Instance != null) CareerState.Instance.ServerAddMoney(amount);
+        }
+
+        [ClientRpc]
+        void RpcSellFx(uint itemNetId, string definitionId, Vector3 position, Quaternion rotation, float scale, Vector3 target, int price)
+        {
+            // İstemcide nesne hâlâ duruyorsa kendi gördüğü konumdan uçsun (1. şahıs görünümü dahil).
+            if (NetworkClient.spawned.TryGetValue(itemNetId, out var identity) && identity != null)
             {
-                total += item.Definition.sellPrice;
-                NetworkServer.Destroy(item.gameObject);
+                var t = identity.transform;
+                position = t.position;
+                rotation = t.rotation;
+                scale = t.localScale.x;
+                identity.gameObject.SetActive(false);
             }
 
-            if (items.Count == 0) return;
-            CareerState.Instance.ServerAddMoney(total);
-            TargetNotify(connectionToClient, $"{items.Count} kaynak satıldı · +{Currency.Format(total)}");
+            var definition = PlotWorld.Instance != null ? PlotWorld.Instance.FindDefinition(definitionId) : null;
+            Gameplay.Effects.SellFlyEffect.Play(definition, position, rotation, scale, target, () =>
+                Gameplay.Effects.FloatingText.Spawn("+" + Currency.Format(price), target + Vector3.up * 0.35f,
+                    new Color(1f, 0.84f, 0.3f)));
         }
 
         [TargetRpc]
