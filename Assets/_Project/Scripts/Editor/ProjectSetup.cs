@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using kcp2k;
+using LandFlipper.Gameplay;
 using LandFlipper.Network;
 using LandFlipper.Player;
 using LandFlipper.Player.Animation;
@@ -15,7 +17,7 @@ using UnityEngine.UIElements;
 namespace LandFlipper.EditorTools
 {
     /// <summary>
-    /// Çekirdek sahneleri, karakter/oyuncu prefab'larını ve UI ayarlarını tekrar üretilebilir
+    /// Çekirdek sahneleri, prefab'ları, kaynak verilerini ve UI ayarlarını tekrar üretilebilir
     /// biçimde kurar. Tekrar çalıştırmak güvenlidir: üretilen varlıkların üzerine yazar.
     /// </summary>
     public static class ProjectSetup
@@ -25,6 +27,8 @@ namespace LandFlipper.EditorTools
         const string GameScenePath = Root + "/Scenes/Game.unity";
         const string PlayerPrefabPath = Root + "/Prefabs/Player/Player.prefab";
         const string CharacterVisualPrefabPath = Root + "/Prefabs/Player/CharacterVisual.prefab";
+        const string PickupFolder = Root + "/Prefabs/Pickups";
+        const string DataFolder = Root + "/Data/ResourceDefinitions";
         const string CharacterModelPath = Root + "/Art/CharacterTest.fbx";
         const string CharacterTexturesFolder = Root + "/Art/CharacterTest_Textures";
         const string CharacterMaterialsFolder = Root + "/Art/Materials/Character";
@@ -37,22 +41,44 @@ namespace LandFlipper.EditorTools
 
         const float GamePlotHalfSize = 18f;
 
+        class ResourceSet
+        {
+            public ResourceDefinition Log, RockChunk, GrassBale, Plank;
+            public List<GameObject> Prefabs = new List<GameObject>();
+
+            public string PriceBoardText =>
+                $"FİYATLAR\n{GrassBale.displayName}  {Currency.Format(GrassBale.sellPrice)}\n" +
+                $"{RockChunk.displayName}  {Currency.Format(RockChunk.sellPrice)}\n" +
+                $"{Plank.displayName}  {Currency.Format(Plank.sellPrice)}\n" +
+                $"{Log.displayName}  {Currency.Format(Log.sellPrice)}";
+        }
+
         [MenuItem("Land Flipper/Setup/Build Core Scenes")]
         public static void BuildCoreScenes()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                 return;
 
-            PlaceholderWorldBuilder.EnsureFolder(Root + "/Scenes");
-            PlaceholderWorldBuilder.EnsureFolder(Root + "/Prefabs/Player");
-            PlaceholderWorldBuilder.EnsureFolder(CharacterMaterialsFolder);
+            int playerLayer = LayerMask.NameToLayer("Player");
+            if (playerLayer < 0)
+            {
+                Debug.LogError("[LandFlipper] 'Player' layer'ı yok. Project Settings > Tags and Layers'dan ekle.");
+                return;
+            }
+
+            LowPolyWorldBuilder.EnsureFolder(Root + "/Scenes");
+            LowPolyWorldBuilder.EnsureFolder(Root + "/Prefabs/Player");
+            LowPolyWorldBuilder.EnsureFolder(PickupFolder);
+            LowPolyWorldBuilder.EnsureFolder(DataFolder);
+            LowPolyWorldBuilder.EnsureFolder(CharacterMaterialsFolder);
 
             var panelSettings = CreatePanelSettings();
-            var palette = PlaceholderWorldBuilder.LoadPalette();
+            var kit = LowPolyWorldBuilder.LoadKit();
+            var resources = CreateResources(kit);
             var characterVisual = CreateCharacterVisualPrefab();
-            var playerPrefab = CreatePlayerPrefab(characterVisual);
-            CreateGameScene(panelSettings, palette);
-            CreateMainMenuScene(panelSettings, playerPrefab, characterVisual, palette);
+            var playerPrefab = CreatePlayerPrefab(characterVisual, playerLayer);
+            CreateGameScene(panelSettings, kit, resources);
+            CreateMainMenuScene(panelSettings, playerPrefab, characterVisual, kit, resources);
 
             EditorBuildSettings.scenes = new[]
             {
@@ -64,7 +90,7 @@ namespace LandFlipper.EditorTools
             AssetDatabase.SaveAssets();
             RelinkPanelSettings(GameScenePath, panelSettings);
             RelinkPanelSettings(MainMenuScenePath, panelSettings);
-            Debug.Log("[LandFlipper] Çekirdek kurulum tamamlandı: MainMenu + Game sahneleri, karakter ve oyuncu prefab'ları.");
+            Debug.Log("[LandFlipper] Çekirdek kurulum tamamlandı: low poly arazi, kaynaklar, satış tezgâhı, oyuncu ve menüler.");
         }
 
         // ---------------------------------------------------------------- UI
@@ -98,6 +124,101 @@ namespace LandFlipper.EditorTools
             so.FindProperty("m_SortingOrder").floatValue = sortingOrder;
             so.ApplyModifiedPropertiesWithoutUndo();
             return doc;
+        }
+
+        // ---------------------------------------------------------------- Resources
+
+        static ResourceSet CreateResources(LowPolyWorldBuilder.Kit kit)
+        {
+            var set = new ResourceSet
+            {
+                GrassBale = Definition("RD_GrassBale", "grass_bale", "Çim Balyası", 4, 1, 0.31f, Vector3.zero),
+                RockChunk = Definition("RD_RockChunk", "rock_chunk", "Taş", 6, 1, 0.3f, Vector3.zero),
+                Log = Definition("RD_Log", "log", "Kütük", 15, 2, 0.36f, new Vector3(0f, 90f, 0f)),
+                Plank = Definition("RD_Plank", "plank", "Tahta", 8, 1, 0.1f, new Vector3(0f, 90f, 0f))
+            };
+
+            set.Prefabs.Add(CreatePickupPrefab("Pickup_Plank", set.Plank, 4f, visual =>
+            {
+                AddMesh(visual, kit.Box, kit.Wood);
+                visual.transform.localScale = new Vector3(0.24f, 0.08f, 1.15f);
+                var c = visual.transform.parent.gameObject.AddComponent<BoxCollider>();
+                c.size = new Vector3(0.24f, 0.08f, 1.15f);
+            }));
+
+            set.Prefabs.Add(CreatePickupPrefab("Pickup_GrassBale", set.GrassBale, 3f, visual =>
+            {
+                AddMesh(visual, kit.Bale, kit.Straw, kit.Twine);
+                var c = visual.transform.parent.gameObject.AddComponent<BoxCollider>();
+                c.size = new Vector3(0.52f, 0.3f, 0.34f);
+            }));
+
+            set.Prefabs.Add(CreatePickupPrefab("Pickup_RockChunk", set.RockChunk, 5f, visual =>
+            {
+                AddMesh(visual, kit.Chunks[0], kit.Rock);
+                visual.transform.localScale = new Vector3(0.2f, 0.17f, 0.18f);
+                var c = visual.transform.parent.gameObject.AddComponent<BoxCollider>();
+                c.size = new Vector3(0.34f, 0.28f, 0.32f);
+            }));
+
+            set.Prefabs.Add(CreatePickupPrefab("Pickup_Log", set.Log, 14f, visual =>
+            {
+                AddMesh(visual, kit.Log, kit.Bark, kit.WoodCut);
+                var c = visual.transform.parent.gameObject.AddComponent<CapsuleCollider>();
+                c.direction = 2;
+                c.radius = 0.17f;
+                c.height = 1.1f;
+            }));
+
+            return set;
+        }
+
+        static ResourceDefinition Definition(string asset, string id, string displayName, int price, int slots, float stackHeight, Vector3 carryEuler)
+        {
+            string path = $"{DataFolder}/{asset}.asset";
+            var def = AssetDatabase.LoadAssetAtPath<ResourceDefinition>(path);
+            if (def == null)
+            {
+                def = ScriptableObject.CreateInstance<ResourceDefinition>();
+                AssetDatabase.CreateAsset(def, path);
+                def.sellPrice = price; // fiyatı sadece ilk oluşturmada yaz; sonra Inspector'dan dengelenir
+                def.slotCost = slots;
+            }
+            def.id = id;
+            def.displayName = displayName;
+            def.stackHeight = stackHeight;
+            def.carryEuler = carryEuler;
+            EditorUtility.SetDirty(def);
+            return def;
+        }
+
+        static GameObject CreatePickupPrefab(string name, ResourceDefinition def, float mass, System.Action<GameObject> buildVisual)
+        {
+            var root = new GameObject(name);
+            var body = root.AddComponent<Rigidbody>();
+            body.mass = mass;
+            body.linearDamping = 0.2f;
+            body.angularDamping = 0.6f;
+            root.AddComponent<NetworkIdentity>();
+            var pickup = root.AddComponent<Pickup>();
+            pickup.EditorSetDefinition(def);
+
+            var visual = new GameObject("Visual");
+            visual.transform.SetParent(root.transform, false);
+            buildVisual(visual);
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, $"{PickupFolder}/{name}.prefab");
+            Object.DestroyImmediate(root);
+
+            def.prefab = prefab.GetComponent<Pickup>();
+            EditorUtility.SetDirty(def);
+            return prefab;
+        }
+
+        static void AddMesh(GameObject go, Mesh mesh, params Material[] materials)
+        {
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            go.AddComponent<MeshRenderer>().sharedMaterials = materials;
         }
 
         // ---------------------------------------------------------------- Character
@@ -168,7 +289,7 @@ namespace LandFlipper.EditorTools
 
         // ---------------------------------------------------------------- Player
 
-        static GameObject CreatePlayerPrefab(GameObject characterVisualPrefab)
+        static GameObject CreatePlayerPrefab(GameObject characterVisualPrefab, int playerLayer)
         {
             var player = new GameObject("Player");
 
@@ -196,6 +317,16 @@ namespace LandFlipper.EditorTools
             cam.fieldOfView = 75f;
             cameraGo.AddComponent<AudioListener>();
 
+            // Gövde önü: diğer oyuncular yükü göğüs hizasında, kollar arasında görür.
+            var carryAnchor = new GameObject("CarryAnchor");
+            carryAnchor.transform.SetParent(player.transform, false);
+            carryAnchor.transform.localPosition = new Vector3(0f, 0.98f, 0.42f);
+
+            // Birinci şahıs: ekranın alt ortasında, küçültülmüş ve görüşü kapatmayacak kadar aşağıda.
+            var viewAnchor = new GameObject("CarryViewAnchor");
+            viewAnchor.transform.SetParent(pivot.transform, false);
+            viewAnchor.transform.localPosition = new Vector3(0f, -0.75f, 1.1f);
+
             player.AddComponent<NetworkIdentity>();
 
             var netTransform = player.AddComponent<NetworkTransformReliable>();
@@ -216,6 +347,13 @@ namespace LandFlipper.EditorTools
                 renderers.GetArrayElementAtIndex(i).objectReferenceValue = bodyRenderers[i];
             so.ApplyModifiedPropertiesWithoutUndo();
 
+            player.AddComponent<PlayerCarry>().EditorSetup(carryAnchor.transform, viewAnchor.transform, animator);
+            var interactor = player.AddComponent<PlayerInteractor>();
+            interactor.EditorSetMask(~((1 << playerLayer) | (1 << 2)));
+
+            foreach (var t in player.GetComponentsInChildren<Transform>(true))
+                t.gameObject.layer = playerLayer;
+
             var prefab = PrefabUtility.SaveAsPrefabAsset(player, PlayerPrefabPath);
             Object.DestroyImmediate(player);
             return prefab;
@@ -224,7 +362,7 @@ namespace LandFlipper.EditorTools
         // ---------------------------------------------------------------- Scenes
 
         static void CreateMainMenuScene(PanelSettings panelSettings, GameObject playerPrefab,
-            GameObject characterVisualPrefab, PlaceholderWorldBuilder.Palette palette)
+            GameObject characterVisualPrefab, LowPolyWorldBuilder.Kit kit, ResourceSet resources)
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 
@@ -238,21 +376,24 @@ namespace LandFlipper.EditorTools
                 }
                 else if (root.TryGetComponent<Light>(out var light))
                 {
-                    PlaceholderWorldBuilder.ApplyCozyLighting(light);
+                    LowPolyWorldBuilder.ApplyCozyLighting(light);
                 }
             }
 
-            PlaceholderWorldBuilder.BuildPlot("MenuDiorama", new PlaceholderWorldBuilder.PlotSettings
+            LowPolyWorldBuilder.BuildPlot("MenuDiorama", new LowPolyWorldBuilder.PlotSettings
             {
                 Seed = 7,
                 HalfSize = 9f,
-                Density = 0.35f,
+                Interactive = false,
+                TreeCount = 7,
+                RockCount = 4,
+                GrassCount = 90,
+                BushCount = 6,
+                FlowerCount = 14,
+                OuterTreeCount = 45,
                 ClearCenter = new Vector3(0f, 0f, 2f),
-                ClearRadius = 4f,
-                IncludeShack = false,
-                IncludeDelivery = false,
-                OuterTreeCount = 30
-            }, palette);
+                ClearRadius = 4f
+            }, kit);
 
             var character = (GameObject)PrefabUtility.InstantiatePrefab(characterVisualPrefab);
             character.name = "MenuCharacter";
@@ -264,6 +405,7 @@ namespace LandFlipper.EditorTools
             var manager = networkGo.AddComponent<LFNetworkManager>();
             manager.transport = kcp;
             manager.playerPrefab = playerPrefab;
+            manager.spawnPrefabs = new List<GameObject>(resources.Prefabs);
             manager.autoCreatePlayer = true;
             manager.offlineScene = MainMenuScenePath;
             manager.onlineScene = GameScenePath;
@@ -272,47 +414,59 @@ namespace LandFlipper.EditorTools
             manager.dontDestroyOnLoad = true;
             manager.runInBackground = true;
 
+            var uiRoot = new GameObject("UI");
             var uiGo = new GameObject("MainMenuUI");
+            uiGo.transform.SetParent(uiRoot.transform, false);
             AddDocument(uiGo, panelSettings, MainMenuUxmlPath, 0);
             uiGo.AddComponent<MainMenuController>();
 
             EditorSceneManager.SaveScene(scene, MainMenuScenePath);
         }
 
-        static void CreateGameScene(PanelSettings panelSettings, PlaceholderWorldBuilder.Palette palette)
+        static void CreateGameScene(PanelSettings panelSettings, LowPolyWorldBuilder.Kit kit, ResourceSet resources)
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 
-            // Kamera oyuncu prefab'ında; sahne kamerası gerekmiyor.
             foreach (var root in scene.GetRootGameObjects())
             {
                 if (root.GetComponent<Camera>() != null)
-                    Object.DestroyImmediate(root);
+                    Object.DestroyImmediate(root); // kamera oyuncu prefab'ında
                 else if (root.TryGetComponent<Light>(out var light))
-                    PlaceholderWorldBuilder.ApplyCozyLighting(light);
+                    LowPolyWorldBuilder.ApplyCozyLighting(light);
             }
 
             float h = GamePlotHalfSize;
             Vector3 entrance = new Vector3(0f, 0f, -h + 3f);
 
-            // Phase 2'de seed tabanlı arazi üretimiyle değiştirilecek dummy arazi.
-            PlaceholderWorldBuilder.BuildPlot("Plot (Placeholder)", new PlaceholderWorldBuilder.PlotSettings
+            // Phase 2'de çalışma zamanında seed'den üretilecek; şimdilik editörde sabit seed.
+            LowPolyWorldBuilder.BuildPlot("Plot", new LowPolyWorldBuilder.PlotSettings
             {
                 Seed = 1234,
                 HalfSize = h,
-                Density = 1f,
+                Interactive = true,
+                TreeCount = 26,
+                RockCount = 18,
+                GrassCount = 340,
+                BushCount = 14,
+                FlowerCount = 30,
+                OuterTreeCount = 110,
                 ClearCenter = entrance + Vector3.forward,
-                ClearRadius = 5f,
+                ClearRadius = 4.5f,
                 IncludeShack = true,
-                IncludeDelivery = true,
-                OuterTreeCount = 50
-            }, palette);
+                IncludeSellStation = true,
+                PriceBoardText = resources.PriceBoardText
+            }, kit);
+
+            var plotNetwork = new GameObject("PlotNetwork");
+            plotNetwork.AddComponent<NetworkIdentity>();
+            plotNetwork.AddComponent<PlotWorld>().EditorSetup(h, 1, resources.Log, resources.RockChunk, resources.GrassBale, resources.Plank);
+            plotNetwork.AddComponent<CareerState>();
 
             var spawnRoot = new GameObject("SpawnPoints");
             Vector3[] offsets =
             {
-                new Vector3(-1.5f, 0.1f, 0f), new Vector3(1.5f, 0.1f, 0f),
-                new Vector3(-3f, 0.1f, 0f), new Vector3(3f, 0.1f, 0f)
+                new Vector3(-1.5f, 0.2f, 0f), new Vector3(1.5f, 0.2f, 0f),
+                new Vector3(-3f, 0.2f, 0f), new Vector3(3f, 0.2f, 0f)
             };
             for (int i = 0; i < offsets.Length; i++)
             {
@@ -327,6 +481,7 @@ namespace LandFlipper.EditorTools
             var hudGo = new GameObject("HUD");
             hudGo.transform.SetParent(uiRoot.transform, false);
             AddDocument(hudGo, panelSettings, HudUxmlPath, 0);
+            hudGo.AddComponent<HudController>();
 
             var menuGo = new GameObject("GameMenu");
             menuGo.transform.SetParent(uiRoot.transform, false);
@@ -343,23 +498,31 @@ namespace LandFlipper.EditorTools
         static void RelinkPanelSettings(string scenePath, PanelSettings settings)
         {
             var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
-            int fixedCount = 0;
+            int docCount = 0;
             foreach (var root in scene.GetRootGameObjects())
             foreach (var doc in root.GetComponentsInChildren<UIDocument>(true))
             {
+                // Bellekteki değer dolu görünse bile diske yazılmamış olabiliyor: her zaman yeniden ata.
                 var so = new SerializedObject(doc);
-                var prop = so.FindProperty("m_PanelSettings");
-                if (prop.objectReferenceValue != null) continue;
-                prop.objectReferenceValue = settings;
+                so.FindProperty("m_PanelSettings").objectReferenceValue = settings;
                 so.ApplyModifiedProperties();
-                fixedCount++;
+                docCount++;
             }
 
-            if (fixedCount > 0)
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+
+            // Diskteki dosyayı doğrula
+            string text = System.IO.File.ReadAllText(scenePath);
+            string guid = AssetDatabase.AssetPathToGUID(PanelSettingsPath);
+            int linked = 0, index = 0;
+            while ((index = text.IndexOf("m_PanelSettings: {fileID: 11400000, guid: " + guid, index, System.StringComparison.Ordinal)) >= 0)
             {
-                EditorSceneManager.MarkSceneDirty(scene);
-                EditorSceneManager.SaveScene(scene);
+                linked++;
+                index++;
             }
+            if (linked < docCount)
+                Debug.LogError($"[LandFlipper] {scenePath}: {docCount} UIDocument'tan sadece {linked} tanesi PanelSettings'e bağlı kaydedildi.");
         }
     }
 }

@@ -230,6 +230,88 @@
 }
 
 /* ---------- HUD ---------- */
+.hud-prompt {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 56%;
+    -unity-text-align: middle-center;
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: rgb(255, 253, 246);
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.hud-money {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    flex-direction: row;
+    align-items: center;
+    padding: 8px 16px 8px 10px;
+    border-radius: 22px;
+    background-color: rgba(244, 235, 217, 0.92);
+    border-width: 2px;
+    border-color: var(--lf-line);
+    transition-duration: 0.2s;
+}
+
+.hud-money.pulse {
+    scale: 1.12 1.12;
+    background-color: rgb(255, 240, 190);
+}
+
+.hud-coin {
+    width: 22px;
+    height: 22px;
+    border-radius: 11px;
+    margin-right: 8px;
+    background-color: rgb(240, 190, 60);
+    border-width: 2px;
+    border-color: rgb(196, 140, 30);
+}
+
+.hud-money-value {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: var(--lf-ink);
+}
+
+.hud-carry {
+    position: absolute;
+    right: 24px;
+    bottom: 24px;
+    min-width: 200px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background-color: rgba(30, 36, 26, 0.72);
+}
+
+.hud-carry-title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: rgb(240, 200, 110);
+    margin-bottom: 4px;
+}
+
+.hud-carry-list {
+    font-size: 16px;
+    color: rgb(255, 253, 246);
+    white-space: normal;
+}
+
+.hud-toast {
+    position: absolute;
+    top: 90px;
+    left: 0;
+    right: 0;
+    -unity-text-align: middle-center;
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: rgb(255, 253, 246);
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.85);
+}
+
 .hud-hint {
     position: absolute;
     left: 24px;

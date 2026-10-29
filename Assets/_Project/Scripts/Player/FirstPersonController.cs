@@ -49,9 +49,14 @@ namespace LandFlipper.Player
         Vector3 horizontalVelocity;
         float verticalVelocity;
         float pitch;
+        float kick;
         bool thirdPerson;
 
         public Camera PlayerCamera => playerCamera;
+        public Transform CameraPivot => cameraPivot;
+
+        /// <summary>Vuruş anında kameraya küçük bir sarsıntı verir (sadece local).</summary>
+        public void Kick(float degrees) => kick = Mathf.Min(kick + degrees, 6f);
         public bool IsThirdPerson => thirdPerson;
 
         void Awake()
@@ -135,6 +140,12 @@ namespace LandFlipper.Player
                     syncedPitch = pitch;
             }
 
+            // Pivot: local'de bakış + vuruş sarsıntısı, diğer oyuncularda ağdan gelen eğim
+            // (taşınan yük de bu pivota bağlı olduğu için herkeste doğru yönde görünür).
+            kick = Mathf.Lerp(kick, 0f, 1f - Mathf.Exp(-14f * Time.deltaTime));
+            float viewPitch = isLocalPlayer ? pitch - kick : syncedPitch;
+            cameraPivot.localRotation = Quaternion.Euler(viewPitch, 0f, 0f);
+
             if (characterAnimator != null)
                 characterAnimator.LookPitch = isLocalPlayer ? pitch : syncedPitch;
         }
@@ -149,7 +160,6 @@ namespace LandFlipper.Player
 
             transform.Rotate(0f, delta.x, 0f);
             pitch = Mathf.Clamp(pitch - delta.y, minPitch, maxPitch);
-            cameraPivot.localRotation = Quaternion.Euler(pitch, 0f, 0f);
         }
 
         void HandleMovement(Vector2 input, bool sprint, bool jump)

@@ -32,6 +32,10 @@ namespace LandFlipper.Player.Animation
         /// <summary>Kamera eğimi (derece, + aşağı). Omurga ve baş bu yöne bakar.</summary>
         public float LookPitch { get; set; }
 
+        /// <summary>Elde yük taşınıyorsa eller bu noktadaki yığının iki yanına uzanır.</summary>
+        public bool IsHolding { get; set; }
+        public Transform HoldTarget { get; set; }
+
         /// <summary>Animasyonun gözlemlenen yatay hızı (debug/test).</summary>
         public float CurrentSpeed { get; private set; }
 
@@ -220,6 +224,16 @@ namespace LandFlipper.Player.Animation
         void SolveArm(Limb arm, float side, float armPhase, float blend)
         {
             Vector3 shoulder = arm.Upper.position;
+
+            if (IsHolding && HoldTarget != null)
+            {
+                // Yığının en altını iki yandan kavra
+                Vector3 grip = HoldTarget.position + transform.right * (side * 0.24f) + HoldTarget.up * 0.08f;
+                Vector3 hint = shoulder + transform.right * (side * 0.5f) - transform.up * 0.4f;
+                TwoBoneIK.Solve(arm.Upper, arm.Middle, arm.End, grip, hint);
+                return;
+            }
+
             float swing = Mathf.Sin(armPhase) * armSwing * blend;
 
             Vector3 target = shoulder

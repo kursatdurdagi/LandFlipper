@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 512f19f85df48b244936742383b3bb1e, type: 3}
+  m_Name: RD_RockChunk
+  m_EditorClassIdentifier: Assembly-CSharp::LandFlipper.Gameplay.ResourceDefinition
+  id: rock_chunk
+  displayName: "Ta\u015F"
+  sellPrice: 6
+  slotCost: 1
+  stackHeight: 0.3
+  carryEuler: {x: 0, y: 0, z: 0}
+  prefab: {fileID: 5258049396696142695, guid: 07a52c851b1eebe4990cbe852a574c95, type: 3}

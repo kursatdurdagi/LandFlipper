@@ -2,6 +2,19 @@
     <Style src="../Styles/Common.uss" />
     <ui:VisualElement name="hud-root" class="screen" picking-mode="Ignore">
         <ui:VisualElement name="crosshair" class="crosshair" picking-mode="Ignore" />
-        <ui:Label name="hint-label" text="WASD: Yürü · Shift: Koş · Space: Zıpla · V: Görünüm · Esc: Menü" class="hud-hint" picking-mode="Ignore" />
+        <ui:Label name="prompt-label" class="hud-prompt hidden" picking-mode="Ignore" />
+
+        <ui:VisualElement name="money-panel" class="hud-money" picking-mode="Ignore">
+            <ui:VisualElement class="hud-coin" picking-mode="Ignore" />
+            <ui:Label name="money-label" text="0 TL" class="hud-money-value" picking-mode="Ignore" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="carry-panel" class="hud-carry hidden" picking-mode="Ignore">
+            <ui:Label name="carry-title" class="hud-carry-title" picking-mode="Ignore" />
+            <ui:Label name="carry-list" class="hud-carry-list" picking-mode="Ignore" />
+        </ui:VisualElement>
+
+        <ui:Label name="toast-label" class="hud-toast hidden" picking-mode="Ignore" />
+        <ui:Label name="hint-label" text="Sol Tık: Biç/Kes/Kır · E: Al/Sat · R: Bırak (basılı: hepsi) · V: Görünüm · Esc: Menü" class="hud-hint" picking-mode="Ignore" />
     </ui:VisualElement>
 </ui:UXML>
