@@ -62,9 +62,11 @@
     border-radius: 14px;
     border-width: 2px;
     border-bottom-width: 3px;
-    border-color: var(--ink);
-    background-color: var(--sun);
+    border-color: var(--leaf-lip);
+    background-color: var(--leaf);
     margin-right: 8px;
+    align-items: center;
+    justify-content: center;
 }
 
 /* ---------------------------------------------------------------- kartlar */

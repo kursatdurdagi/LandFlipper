@@ -215,12 +215,9 @@ namespace LandFlipper.UI
             nextRow.Add(view.Price);
             view.NextStat = new Label();
             view.NextStat.AddToClassList("tool-next-stat");
-            view.Requirement = new Label();
-            view.Requirement.AddToClassList("tool-req");
             view.Next.Add(nextCaption);
             view.Next.Add(nextRow);
             view.Next.Add(view.NextStat);
-            view.Next.Add(view.Requirement);
             view.Card.Add(view.Next);
 
             view.Button = new Button(() => PlayerTools.Local?.RequestUpgrade(kind));
@@ -236,7 +233,7 @@ namespace LandFlipper.UI
             var career = CareerState.Instance;
             if (career == null) return;
 
-            levelLabel.text = career.Level.ToString();
+            if (levelLabel != null) levelLabel.text = career.Level.ToString();
             moneyLabel.text = Currency.Format(career.Money);
 
             foreach (var view in cards)
@@ -264,9 +261,6 @@ namespace LandFlipper.UI
                     view.Price.text = Currency.Format(next.price);
                     view.Price.EnableInClassList("missing", career.Money < next.price);
                     view.NextStat.text = next.PowerText;
-                    bool levelOk = career.Level >= next.requiredLevel;
-                    view.Requirement.text = levelOk ? $"Seviye {next.requiredLevel} şartı karşılandı" : $"Seviye {next.requiredLevel} gerekli";
-                    view.Requirement.EnableInClassList("missing", !levelOk);
                 }
 
                 view.Button.SetEnabled(canUpgrade);
@@ -274,9 +268,7 @@ namespace LandFlipper.UI
                     ? "En iyi alet sende"
                     : canUpgrade
                         ? "Satın al"
-                        : career.Level < next.requiredLevel
-                            ? "Kilitli"
-                            : "Bütçe yetersiz";
+                        : "Bütçe yetersiz";
             }
         }
     }

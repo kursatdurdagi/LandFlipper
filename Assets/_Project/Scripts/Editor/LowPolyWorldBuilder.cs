@@ -75,6 +75,9 @@ namespace LandFlipper.EditorTools
             k.Post = SaveMesh(LowPolyMeshFactory.FencePost(), "FencePost");
             k.Disc = SaveMesh(LowPolyMeshFactory.Disc(8, "Disc8"), "Disc8");
             k.Box = SaveMesh(LowPolyMeshFactory.UnitBox("UnitBox"), "UnitBox");
+
+            // Stilize çevre: ProBuilder ile yumuşak modeller + boyalı dokular (low poly sürümün yerine)
+            StylizedKit.Apply(k);
             return k;
         }
 
@@ -108,9 +111,13 @@ namespace LandFlipper.EditorTools
             var placer = new Placer(rng, h);
 
             // ---- zemin
-            var ground = MeshObject("PlotGround", root.transform, SaveMesh(LowPolyMeshFactory.PlotTerrain(h, 2f, seed), $"PlotTerrain_{seed}"), k.Grass);
+            var plotMesh = LowPolyMeshFactory.PlotTerrain(h, 2f, seed);
+            StylizedKit.SoftenTerrain(plotMesh, 0.22f);
+            var ground = MeshObject("PlotGround", root.transform, SaveMesh(plotMesh, $"PlotTerrain_{seed}"), k.Grass);
             ground.AddComponent<MeshCollider>();
-            var outer = MeshObject("OuterGround", root.transform, SaveMesh(LowPolyMeshFactory.OuterTerrain(h, 320f, 7f, seed), $"OuterTerrain_{seed}"), k.OuterGrass);
+            var outerMesh = LowPolyMeshFactory.OuterTerrain(h, 320f, 7f, seed);
+            StylizedKit.SoftenTerrain(outerMesh, 0.12f);
+            var outer = MeshObject("OuterGround", root.transform, SaveMesh(outerMesh, $"OuterTerrain_{seed}"), k.OuterGrass);
             outer.AddComponent<MeshCollider>();
             Physics.SyncTransforms();
 
@@ -369,6 +376,11 @@ namespace LandFlipper.EditorTools
             bush.AddComponent<BushNode>().EditorSetup(id, 2, visual.transform, collider, bales);
         }
 
+        /// <summary>
+        /// Stilize, eski ahşap kulübe: her parça (duvar, çatı, zemin...) ProBuilder ile üretilmiş
+        /// pahlı, hafif eğri, dokulu tahtalardan oluşan bir gruptur. Sökülme sırası ve grup kökündeki
+        /// collider'lar ShackNode ile aynı kalır.
+        /// </summary>
         static void BuildShack(Transform parent, Vector3 p, int id, bool interactive)
         {
             var shack = new GameObject(interactive ? $"Shack_{id}" : "Shack (Ruin)");
@@ -377,29 +389,118 @@ namespace LandFlipper.EditorTools
             shack.transform.localRotation = Quaternion.Euler(0f, 25f, 0f);
             var t = shack.transform;
             var parts = new List<Transform>();
+            var rng = new System.Random(id * 7 + 3);
+            float R(float a, float b) => a + (float)rng.NextDouble() * (b - a);
+            float Q(float v) => Mathf.Round(v * 20f) / 20f;   // 5 cm adım: aynı boydaki tahtalar mesh paylaşır
+            int variant = 0;
 
-            void Part(string n, Vector3 pos, Vector3 size, Vector3 euler, Material m)
+            Transform Part(string n, Vector3 pos, Vector3 euler)
             {
-                var go = MeshObject(n, t, kit.Box, m);
+                var g = new GameObject(n).transform;
+                g.SetParent(t, false);
+                g.localPosition = pos;
+                g.localRotation = Quaternion.Euler(euler);
+                parts.Add(g);
+                return g;
+            }
+
+            void Board(Transform g, Vector3 pos, Vector3 size, Vector3 euler, Material m, bool roof = false)
+            {
+                var mesh = StylizedKit.Board(size, variant++ % 3, roof ? 0.85f : 0.6f, roof ? "SRoofPanel" : "SBoard");
+                var go = MeshObject(roof ? "Panel" : "Board", g, mesh, m);
                 go.transform.localPosition = pos;
-                go.transform.localScale = size;
                 go.transform.localRotation = Quaternion.Euler(euler);
-                go.AddComponent<BoxCollider>();
-                parts.Add(go.transform);
+            }
+
+            // Dikey tahta duvar. along: tahtaların dizildiği yerel eksen (X veya Z), outward: dış yüz yönü (±1)
+            void Wall(Transform g, float width, float height, bool alongX, float outward, int skip = -1)
+            {
+                int n = Mathf.Max(2, Mathf.RoundToInt(width / 0.31f));
+                float w = width / n;
+                for (int i = 0; i < n; i++)
+                {
+                    if (i == skip) continue;
+                    float h = Q(height + R(-0.12f, 0.1f));
+                    float o = -width * 0.5f + w * (i + 0.5f);
+                    var size = alongX ? new Vector3(w - 0.015f, h, 0.07f) : new Vector3(0.07f, h, w - 0.015f);
+                    var pos = alongX ? new Vector3(o, h * 0.5f - height * 0.5f, 0f) : new Vector3(0f, h * 0.5f - height * 0.5f, o);
+                    float tilt = R(-1.8f, 1.8f);
+                    Board(g, pos, size, alongX ? new Vector3(0f, 0f, tilt) : new Vector3(tilt, 0f, 0f), (i % 4 == 2) ? kit.WoodDark : kit.Wood);
+                }
+                // dışta iki yatay kuşak
+                foreach (float y in new[] { -height * 0.28f, height * 0.26f })
+                {
+                    var size = alongX ? new Vector3(width + 0.06f, 0.12f, 0.05f) : new Vector3(0.05f, 0.12f, width + 0.06f);
+                    var pos = alongX ? new Vector3(0f, y, 0.06f * outward) : new Vector3(0.06f * outward, y, 0f);
+                    Board(g, pos, size, Vector3.zero, kit.WoodDark);
+                }
+            }
+
+            void Collide(Transform g)
+            {
+                var bounds = new Bounds();
+                bool any = false;
+                foreach (var mf in g.GetComponentsInChildren<MeshFilter>())
+                {
+                    var mb = mf.sharedMesh.bounds;
+                    for (int i = 0; i < 8; i++)
+                    {
+                        var corner = mb.center + Vector3.Scale(mb.extents, new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1));
+                        var local = g.InverseTransformPoint(mf.transform.TransformPoint(corner));
+                        if (!any) { bounds = new Bounds(local, Vector3.zero); any = true; }
+                        else bounds.Encapsulate(local);
+                    }
+                }
+                var c = g.gameObject.AddComponent<BoxCollider>();
+                c.center = bounds.center;
+                c.size = bounds.size;
             }
 
             // Sökülme sırası: yerdeki tahtalar → çatı → duvarlar → zemin
-            Part("PlankA", new Vector3(2.8f, 0.12f, -0.9f), new Vector3(0.24f, 0.08f, 2.2f), new Vector3(0f, 25f, 4f), kit.WoodDark);
-            Part("PlankB", new Vector3(2.5f, 0.18f, 0.3f), new Vector3(0.24f, 0.08f, 1.8f), new Vector3(0f, -15f, 8f), kit.Wood);
-            Part("RoofR", new Vector3(1.2f, 2.35f, 0.4f), new Vector3(2.0f, 0.12f, 3.0f), new Vector3(0f, 0f, -34f), kit.Roof);
-            Part("RoofL", new Vector3(-1.05f, 2.55f, 0f), new Vector3(2.4f, 0.12f, 4f), new Vector3(0f, 0f, 28f), kit.Roof);
-            Part("WallRight", new Vector3(1.95f, 0.8f, 0.4f), new Vector3(0.12f, 1.4f, 2.5f), new Vector3(0f, 0f, 5f), kit.Wood);
-            Part("WallFrontR", new Vector3(1.4f, 1.15f, -1.65f), new Vector3(1.2f, 2.1f, 0.12f), Vector3.zero, kit.Wood);
-            Part("WallFrontL", new Vector3(-1.25f, 1.15f, -1.65f), new Vector3(1.5f, 2.1f, 0.12f), Vector3.zero, kit.Wood);
-            Part("WallLeft", new Vector3(-1.95f, 1.15f, 0f), new Vector3(0.12f, 2.1f, 3.4f), Vector3.zero, kit.Wood);
-            Part("WallBack", new Vector3(0f, 1.15f, 1.65f), new Vector3(4f, 2.1f, 0.12f), Vector3.zero, kit.Wood);
-            Part("Floor", new Vector3(0f, 0.08f, 0f), new Vector3(4f, 0.16f, 3.4f), Vector3.zero, kit.WoodDark);
+            var plankA = Part("PlankA", new Vector3(2.8f, 0.1f, -0.9f), new Vector3(0f, 25f, 4f));
+            Board(plankA, Vector3.zero, new Vector3(0.24f, 0.07f, 2.2f), Vector3.zero, kit.WoodDark);
+            var plankB = Part("PlankB", new Vector3(2.5f, 0.16f, 0.3f), new Vector3(0f, -15f, 8f));
+            Board(plankB, Vector3.zero, new Vector3(0.24f, 0.07f, 1.8f), Vector3.zero, kit.Wood);
 
+            // Çatı: kiremit dokulu kalın panel + altta koyu saçak tahtası (RoofR'de +X aşağıda, RoofL'de -X)
+            var roofR = Part("RoofR", new Vector3(1.2f, 2.35f, 0.4f), new Vector3(0f, 0f, -34f));
+            Board(roofR, Vector3.zero, new Vector3(2.0f, 0.1f, 3.0f), Vector3.zero, kit.Roof, true);
+            Board(roofR, new Vector3(0.98f, -0.04f, 0f), new Vector3(0.12f, 0.12f, 3.1f), Vector3.zero, kit.WoodDark);
+            var roofL = Part("RoofL", new Vector3(-1.05f, 2.55f, 0f), new Vector3(0f, 0f, 28f));
+            Board(roofL, Vector3.zero, new Vector3(2.4f, 0.1f, 4.0f), Vector3.zero, kit.Roof, true);
+            Board(roofL, new Vector3(-1.18f, -0.04f, 0f), new Vector3(0.12f, 0.12f, 4.1f), Vector3.zero, kit.WoodDark);
+            Board(roofL, new Vector3(1.18f, -0.05f, 0f), new Vector3(0.15f, 0.15f, 4.2f), Vector3.zero, kit.WoodDark); // mahya kirişi
+
+            // Duvarlar (sağ duvar yıkık: kısa ve bir tahtası eksik)
+            var wallRight = Part("WallRight", new Vector3(1.95f, 0.8f, 0.4f), new Vector3(0f, 0f, 5f));
+            Wall(wallRight, 2.5f, 1.4f, false, 1f, 5);
+            var wallFrontR = Part("WallFrontR", new Vector3(1.4f, 1.15f, -1.65f), Vector3.zero);
+            Wall(wallFrontR, 1.2f, 2.1f, true, -1f);
+            Board(wallFrontR, new Vector3(0.62f, 0.05f, -0.03f), new Vector3(0.14f, 2.3f, 0.14f), Vector3.zero, kit.WoodDark); // köşe dikmesi
+            var wallFrontL = Part("WallFrontL", new Vector3(-1.25f, 1.15f, -1.65f), Vector3.zero);
+            Wall(wallFrontL, 1.5f, 2.1f, true, -1f);
+            Board(wallFrontL, new Vector3(-0.77f, 0.05f, -0.03f), new Vector3(0.14f, 2.3f, 0.14f), Vector3.zero, kit.WoodDark);
+            Board(wallFrontL, new Vector3(0.78f, 0.05f, -0.03f), new Vector3(0.12f, 2.3f, 0.12f), Vector3.zero, kit.WoodDark); // kapı kasası
+            var wallLeft = Part("WallLeft", new Vector3(-1.95f, 1.15f, 0f), Vector3.zero);
+            Wall(wallLeft, 3.4f, 2.1f, false, -1f);
+            var wallBack = Part("WallBack", new Vector3(0f, 1.15f, 1.65f), Vector3.zero);
+            Wall(wallBack, 4f, 2.1f, true, 1f);
+            Board(wallBack, new Vector3(-1.98f, 0.05f, 0.03f), new Vector3(0.14f, 2.3f, 0.14f), Vector3.zero, kit.WoodDark);
+            Board(wallBack, new Vector3(1.98f, 0.05f, 0.03f), new Vector3(0.14f, 2.3f, 0.14f), Vector3.zero, kit.WoodDark);
+
+            // Zemin: X boyunca uzanan tahtalar
+            var floor = Part("Floor", new Vector3(0f, 0.08f, 0f), Vector3.zero);
+            {
+                int n = 11;
+                float w = 3.4f / n;
+                for (int i = 0; i < n; i++)
+                    Board(floor, new Vector3(R(-0.04f, 0.04f), R(-0.01f, 0.015f), -1.7f + w * (i + 0.5f)),
+                        new Vector3(4f, 0.07f, w - 0.012f), new Vector3(0f, R(-0.6f, 0.6f), 0f), i % 3 == 1 ? kit.Wood : kit.WoodDark);
+                Board(floor, new Vector3(0f, -0.06f, -1.45f), new Vector3(4.05f, 0.1f, 0.12f), Vector3.zero, kit.WoodDark); // altlık
+                Board(floor, new Vector3(0f, -0.06f, 1.45f), new Vector3(4.05f, 0.1f, 0.12f), Vector3.zero, kit.WoodDark);
+            }
+
+            foreach (var part in parts) Collide(part);
             if (interactive)
                 shack.AddComponent<ShackNode>().EditorSetup(id, parts.ToArray(), 2);
         }
@@ -452,7 +553,7 @@ namespace LandFlipper.EditorTools
             sign.transform.localPosition = new Vector3(0f, 3.45f, -1.2f);
             Part("Board", sign.transform, b, Vector3.zero, new Vector3(2.2f, 0.6f, 0.08f), Vector3.zero, false, kit.Sign);
             Part("Frame", sign.transform, b, new Vector3(0f, 0f, 0.02f), new Vector3(2.32f, 0.72f, 0.06f), Vector3.zero, false, kit.WoodDark);
-            Label(sign.transform, "SATIŞ", new Vector3(0f, 0f, -0.05f), 0.055f, new Color(0.33f, 0.2f, 0.12f));
+            Label(sign.transform, "SATIŞ", new Vector3(0f, 0f, -0.05f), 0.055f, SignInk);
 
             // fiyat panosu
             var board = new GameObject("PriceBoard");
@@ -461,7 +562,7 @@ namespace LandFlipper.EditorTools
             board.transform.localRotation = Quaternion.Euler(0f, -20f, 0f);
             Part("Leg", board.transform, b, new Vector3(0f, 0.7f, 0.05f), new Vector3(0.1f, 1.4f, 0.1f), Vector3.zero, true, kit.WoodDark);
             Part("Panel", board.transform, b, new Vector3(0f, 1.45f, 0f), new Vector3(1.15f, 1.0f, 0.06f), Vector3.zero, false, kit.Sign);
-            Label(board.transform, priceText, new Vector3(0f, 1.45f, -0.04f), 0.0095f, new Color(0.25f, 0.18f, 0.12f));
+            Label(board.transform, priceText, new Vector3(0f, 1.45f, -0.04f), 0.0095f, SignInk);
 
             // kasalar ve ürünler
             for (int i = 0; i < 3; i++)
@@ -638,7 +739,7 @@ namespace LandFlipper.EditorTools
             sign.transform.localPosition = new Vector3(-0.3f, 2.62f, -0.95f);
             Part("Board", sign.transform, b, Vector3.zero, new Vector3(1.9f, 0.5f, 0.08f), Vector3.zero, false, kit.Sign);
             Part("Frame", sign.transform, b, new Vector3(0f, 0f, 0.02f), new Vector3(2.0f, 0.6f, 0.06f), Vector3.zero, false, kit.WoodDark);
-            Label(sign.transform, "ALETLER", new Vector3(0f, 0f, -0.05f), 0.026f, new Color(0.33f, 0.2f, 0.12f));
+            Label(sign.transform, "ALETLER", new Vector3(0f, 0f, -0.05f), 0.026f, SignInk);
 
             // kütük üstünde örs (yükseltme olunca zıplar)
             Part("AnvilStump", t, kit.Disc, new Vector3(1.55f, 0.14f, -0.35f), new Vector3(0.42f, 0.55f, 0.42f), Vector3.zero, true, kit.Bark);
@@ -672,11 +773,31 @@ namespace LandFlipper.EditorTools
                     GameObjectUtility.SetStaticEditorFlags(tr.gameObject, StaticEditorFlags.BatchingStatic | StaticEditorFlags.ContributeGI);
         }
 
+        /// <summary>Tabela yazıları: krem tahta üzerinde net okunsun diye neredeyse siyah.</summary>
+        static readonly Color SignInk = new Color(0.07f, 0.055f, 0.045f);
+
         static void Label(Transform parent, string text, Vector3 localPos, float size, Color color)
         {
             var go = new GameObject("Text");
             go.transform.SetParent(parent, false);
             go.transform.localPosition = localPos;
+
+            // Keskin SDF yazı (eski TextMesh soluk görünüyordu)
+            var font = SignFont();
+            if (font != null)
+            {
+                var tmp = go.AddComponent<TMPro.TextMeshPro>();
+                tmp.font = font;
+                tmp.text = text;
+                tmp.fontSize = size * 96f * 0.95f;
+                tmp.fontStyle = TMPro.FontStyles.Bold;
+                tmp.alignment = TMPro.TextAlignmentOptions.Center;
+                tmp.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
+                tmp.color = color;
+                tmp.rectTransform.sizeDelta = new Vector2(20f, 10f);
+                return;
+            }
+
             var tm = go.AddComponent<TextMesh>();
             tm.text = text;
             tm.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
@@ -687,6 +808,49 @@ namespace LandFlipper.EditorTools
             tm.fontStyle = FontStyle.Bold;
             tm.color = color;
             go.GetComponent<MeshRenderer>().sharedMaterial = tm.font.material;
+        }
+
+        const string SignFontFolder = "Assets/_Project/Art/Fonts";
+        const string SignFontTtf = SignFontFolder + "/Roboto-Bold.ttf";
+        const string SignFontAssetPath = SignFontFolder + "/SignFont SDF.asset";
+        const string SignFontSource = "Packages/com.unity.searcher/Editor/Resources/FlatSkin/Font/Roboto-Bold.ttf";
+        static TMPro.TMP_FontAsset signFont;
+
+        /// <summary>Tabela fontu: Roboto Bold (Apache 2.0) projeye kopyalanır, dinamik SDF font asset'i üretilir.</summary>
+        static TMPro.TMP_FontAsset SignFont()
+        {
+            if (signFont != null) return signFont;
+            signFont = AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>(SignFontAssetPath);
+            if (signFont != null) return signFont;
+
+            EnsureFolder(SignFontFolder);
+            if (AssetDatabase.LoadAssetAtPath<Font>(SignFontTtf) == null)
+            {
+                string src = System.IO.Path.GetFullPath(SignFontSource);
+                if (!System.IO.File.Exists(src)) return null;
+                System.IO.File.Copy(src, System.IO.Path.GetFullPath(SignFontTtf), true);
+                AssetDatabase.ImportAsset(SignFontTtf);
+            }
+
+            var ttf = AssetDatabase.LoadAssetAtPath<Font>(SignFontTtf);
+            if (ttf == null) return null;
+            var asset = TMPro.TMP_FontAsset.CreateFontAsset(ttf, 90, 9, UnityEngine.TextCore.LowLevel.GlyphRenderMode.SDFAA, 1024, 1024);
+            if (asset == null) return null;
+            asset.name = "SignFont SDF";
+            AssetDatabase.CreateAsset(asset, SignFontAssetPath);
+            if (asset.atlasTextures != null && asset.atlasTextures.Length > 0 && asset.atlasTextures[0] != null)
+            {
+                asset.atlasTextures[0].name = "SignFont Atlas";
+                AssetDatabase.AddObjectToAsset(asset.atlasTextures[0], asset);
+            }
+            if (asset.material != null)
+            {
+                asset.material.name = "SignFont Material";
+                AssetDatabase.AddObjectToAsset(asset.material, asset);
+            }
+            AssetDatabase.SaveAssets();
+            signFont = asset;
+            return signFont;
         }
 
         static void Decor(Transform parent, Mesh mesh, Material[] mats, Vector3 p, float scale)
@@ -761,9 +925,12 @@ namespace LandFlipper.EditorTools
             return result;
         }
 
-        public static Mesh SaveMesh(Mesh mesh, string name)
+        public static Mesh SaveMesh(Mesh mesh, string name) => SaveMeshAt(mesh, $"{MeshFolder}/{name}.asset");
+
+        /// <summary>Mesh'i verilen yola kaydeder; varsa üzerine yazar (referanslar bozulmaz).</summary>
+        public static Mesh SaveMeshAt(Mesh mesh, string path)
         {
-            string path = $"{MeshFolder}/{name}.asset";
+            string name = System.IO.Path.GetFileNameWithoutExtension(path);
             mesh.name = name;
             var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
             if (existing != null)

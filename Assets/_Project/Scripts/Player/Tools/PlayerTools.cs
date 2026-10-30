@@ -45,8 +45,13 @@ namespace LandFlipper.Player.Tools
         [SerializeField] float thumbCurl = 25f;
 
         [Header("1. Şahıs")]
+        [Header("Ses")]
+        [SerializeField] SfxLibrary sfx;
+
+        [Tooltip("Makası kendi ekseni etrafında çevirir (ağız düzlemi kameraya dönsün).")]
+        [SerializeField] float shearsRoll = 0f;
         [Tooltip("Aletin omza göre ek kaydırması (kamera uzayı, m).")]
-        [SerializeField] Vector3 firstPersonOffset = new Vector3(-0.04f, 0.27f, 0.12f);
+        [SerializeField] Vector3 firstPersonOffset = new Vector3(-0.04f, 0.24f, 0.06f);
 
         [SyncVar] sbyte syncedKind = -1;
         [SyncVar] bool syncedWorking;
@@ -66,6 +71,9 @@ namespace LandFlipper.Player.Tools
         float equipBlend;
         float workBlend;
         float swingStart = -10f;
+        SfxKind swingSfx;
+        bool impactPlayed = true;
+        int lastSnip;
         float swingDuration = 0.45f;
         float snipPhase;
 
@@ -101,13 +109,15 @@ namespace LandFlipper.Player.Tools
         // ------------------------------------------------------------ owner API
 
         /// <summary>Balta/çekiç savurması ya da makasla tek kesiş başlatır. Darbe anına kalan süreyi döner.</summary>
-        public float BeginSwing(ToolKind kind, float duration)
+        public float BeginSwing(ToolKind kind, float duration, SfxKind sound = SfxKind.None)
         {
             Equip(kind);
             swingStart = Time.time;
             swingDuration = Mathf.Max(0.15f, duration);
             lastUseTime = Time.time;
-            if (isLocalPlayer) CmdSwing((byte)kind, swingDuration);
+            swingSfx = sound != SfxKind.None ? sound : DefaultSfx(kind);
+            impactPlayed = false;
+            if (isLocalPlayer) CmdSwing((byte)kind, swingDuration, (byte)swingSfx);
             return swingDuration * ImpactAt;
         }
 
@@ -165,17 +175,68 @@ namespace LandFlipper.Player.Tools
         }
 
         [Command]
-        void CmdSwing(byte kind, float duration)
+        void CmdSwing(byte kind, float duration, byte sound)
         {
             syncedKind = (sbyte)kind;
-            RpcSwing(kind, Mathf.Clamp(duration, 0.15f, 2f));
+            RpcSwing(kind, Mathf.Clamp(duration, 0.15f, 2f), sound);
         }
 
         [ClientRpc(includeOwner = false)]
-        void RpcSwing(byte kind, float duration)
+        void RpcSwing(byte kind, float duration, byte sound)
         {
             swingStart = Time.time;
             swingDuration = duration;
+            swingSfx = (SfxKind)sound;
+            impactPlayed = false;
+        }
+
+        static SfxKind DefaultSfx(ToolKind kind) => kind switch
+        {
+            ToolKind.Axe => SfxKind.Wood,
+            ToolKind.Hammer => SfxKind.Rock,
+            _ => SfxKind.Snip
+        };
+
+        // ------------------------------------------------------------ ses (animasyonla aynı karede)
+
+        void UpdateSfx()
+        {
+            // basılı tutarak biçme: ağızlar her kapandığında (faz x.5) bir "şık"
+            if (Working && shownKind == (int)ToolKind.Shears && equipBlend > 0.6f)
+            {
+                int snip = Mathf.FloorToInt(snipPhase - SnipSoundPhase);
+                if (snip != lastSnip)
+                {
+                    lastSnip = snip;
+                    PlaySfx(SfxKind.Snip, 0.85f);
+                }
+            }
+            else lastSnip = Mathf.FloorToInt(snipPhase - SnipSoundPhase);
+
+            // savurma: alet hedefe değdiği an (pozun darbe karesi)
+            if (!impactPlayed && swingDuration > 0f)
+            {
+                float t = (Time.time - swingStart) / swingDuration;
+                float at = shownKind == (int)ToolKind.Shears ? ImpactAt * 0.8f : ImpactAt + HeavyContactLag;
+                if (t >= at)
+                {
+                    impactPlayed = true;
+                    if (t < 1f) PlaySfx(swingSfx, 1f);
+                }
+            }
+        }
+
+        // ses dosyalarının tepe noktası ~8-25 ms sonra: kapanmadan hemen önce başlat
+        const float SnipSoundPhase = 0.45f;
+        // ağır alet pozu darbe pozuna ImpactAt + 0.04'te ulaşır
+        const float HeavyContactLag = 0.035f;
+
+        void PlaySfx(SfxKind kind, float volume)
+        {
+            if (sfx == null || kind == SfxKind.None) return;
+            bool local = isLocalPlayer;
+            Vector3 pos = transform.position + Vector3.up * 1.2f + transform.forward * 0.6f;
+            sfx.Play(kind, pos, local ? 0.35f : 1f, volume);
         }
 
         [Command]
@@ -227,6 +288,7 @@ namespace LandFlipper.Player.Tools
 
             workBlend = Mathf.MoveTowards(workBlend, Working ? 1f : 0f, dt * 8f);
             if (Working) snipPhase += dt / snipInterval;
+            UpdateSfx();
 
             if (firstPersonArms != null)
                 firstPersonArms.ToolMode = isLocalPlayer && shownKind >= 0;
@@ -290,18 +352,33 @@ namespace LandFlipper.Player.Tools
             // Sağ el sapı kavrar: avuç içi aletin soluna bakar, parmaklar vuran yüze doğru sarılır.
             Vector3 palm = gripRot * Vector3.left;
             Vector3 fingers = gripRot * Vector3.forward;
-            Vector3 wrist = gripPos - fingers * 0.07f - palm * 0.03f;
-            Vector3 elbowHint = upper.position + frame * new Vector3(0.4f, -0.5f, -0.15f);
+            Vector3 wrist = gripPos - fingers * GripFingerOffset - palm * GripPalmOffset;
+
+            // Kol boyundan uzağa uzanma: kol gerilip el aletten kopmasın
+            float reach = (Vector3.Distance(upper.position, middle.position) + Vector3.Distance(middle.position, hand.position)) * 0.97f;
+            Vector3 toWrist = wrist - upper.position;
+            if (toWrist.magnitude > reach) wrist = upper.position + toWrist.normalized * reach;
+
+            Vector3 elbowHint = upper.position + frame * new Vector3(0.45f, -0.55f, -0.2f);
             HandPose.Solve(upper, middle, hand, handBind, wrist, elbowHint, palm, fingers);
             CurlFingers(hand);
+
+            // Alet, hesaplanan noktaya değil elin GERÇEK pozuna bağlanır: el ile alet arasında kayma olmaz.
+            Quaternion actualGrip = hand.rotation * HandToGrip;
+            Vector3 actualGripPos = hand.position + actualGrip * (Vector3.forward * GripFingerOffset + Vector3.left * GripPalmOffset);
 
             var t = slot.Instance.transform;
             Vector3 offset = definition != null ? definition.gripPositionOffset : Vector3.zero;
             Quaternion euler = definition != null ? Quaternion.Euler(definition.gripEulerOffset) : Quaternion.identity;
-            t.SetPositionAndRotation(gripPos + gripRot * offset, gripRot * euler);
+            t.SetPositionAndRotation(actualGripPos + actualGrip * offset, actualGrip * euler);
             if (!slot.Instance.activeSelf) slot.Instance.SetActive(true);
             if (slot.Visual != null) slot.Visual.SetOpen(open);
         }
+
+        const float GripFingerOffset = 0.07f;
+        const float GripPalmOffset = 0.03f;
+        // el dönüşü = LookRotation(avuç, parmak); tutma dönüşü = el * bunun tersi
+        static readonly Quaternion HandToGrip = Quaternion.Inverse(Quaternion.LookRotation(Vector3.left, Vector3.forward));
 
         // Parmaklar sapı sarar (animatörler her karede bind pozuna döndürdüğü için üstüne eklenir).
         readonly System.Collections.Generic.Dictionary<Transform, Transform[]> fingerCache =
@@ -334,20 +411,20 @@ namespace LandFlipper.Player.Tools
 
         // Omuz uzayında (x sağ, y yukarı, z ileri) aletin tutma noktası ve yönü.
         // Alet: +Y başı/ucu, +Z vuran yüz. Pozitif X açısı aletin başını öne yatırır.
-        static readonly Vector3 LoweredPos = new Vector3(0.08f, -0.62f, 0.1f);
+        static readonly Vector3 LoweredPos = new Vector3(0.06f, -0.42f, 0.12f);
         static readonly Vector3 LoweredEuler = new Vector3(35f, 0f, -10f);
 
-        static readonly Vector3 HeavyIdlePos = new Vector3(0.02f, -0.36f, 0.34f);
+        static readonly Vector3 HeavyIdlePos = new Vector3(0.02f, -0.22f, 0.3f);
         static readonly Vector3 HeavyIdleEuler = new Vector3(18f, -6f, -14f);
-        static readonly Vector3 HeavyWindupPos = new Vector3(0.06f, -0.1f, 0.2f);
+        static readonly Vector3 HeavyWindupPos = new Vector3(0.06f, 0.02f, 0.18f);
         static readonly Vector3 HeavyWindupEuler = new Vector3(-30f, -4f, -10f);
-        static readonly Vector3 HeavyImpactPos = new Vector3(-0.05f, -0.3f, 0.52f);
+        static readonly Vector3 HeavyImpactPos = new Vector3(-0.04f, -0.18f, 0.36f);
         static readonly Vector3 HeavyImpactEuler = new Vector3(80f, -4f, -6f);
 
-        static readonly Vector3 ShearsIdlePos = new Vector3(0.0f, -0.24f, 0.4f);
-        static readonly Vector3 ShearsIdleEuler = new Vector3(48f, -12f, -18f);
-        static readonly Vector3 ShearsWorkPos = new Vector3(-0.05f, -0.3f, 0.5f);
-        static readonly Vector3 ShearsWorkEuler = new Vector3(85f, -6f, -10f);
+        static readonly Vector3 ShearsIdlePos = new Vector3(-0.02f, -0.15f, 0.3f);
+        static readonly Vector3 ShearsIdleEuler = new Vector3(25f, -10f, 15f);
+        static readonly Vector3 ShearsWorkPos = new Vector3(-0.06f, -0.17f, 0.33f);
+        static readonly Vector3 ShearsWorkEuler = new Vector3(40f, -15f, 20f);
 
         void EvaluatePose(ToolKind kind, out Vector3 pos, out Quaternion rot, out float open)
         {
@@ -366,8 +443,8 @@ namespace LandFlipper.Player.Tools
                     // makas ritmi: aç-kapa ve her kesişte hafif ileri itme
                     float c = Mathf.Cos(snipPhase * Mathf.PI * 2f);
                     open = Mathf.Lerp(open, 0.5f + 0.5f * c, workBlend);
-                    p.z += (0.5f - 0.5f * c) * 0.025f * workBlend;
-                    e.x += (0.5f - 0.5f * c) * 6f * workBlend;
+                    p.z += (0.5f - 0.5f * c) * 0.012f * workBlend;
+                    e.x += (0.5f - 0.5f * c) * 3f * workBlend;
                 }
 
                 if (swingT >= 0f)
@@ -421,6 +498,8 @@ namespace LandFlipper.Player.Tools
             float b = Smooth(equipBlend);
             pos = Vector3.Lerp(LoweredPos, p, b);
             rot = Quaternion.Slerp(Quaternion.Euler(LoweredEuler), Quaternion.Euler(e), b);
+            // makas düzlemi kameraya dönük dursun (ağız açılıp kapanırken görünsün)
+            if (kind == ToolKind.Shears) rot *= Quaternion.Euler(0f, shearsRoll, 0f);
         }
 
         static float Smooth(float t)
@@ -485,6 +564,8 @@ namespace LandFlipper.Player.Tools
             firstPersonArms = arms;
             cameraPivot = pivot;
         }
+
+        public void EditorSetSfx(SfxLibrary library) => sfx = library;
 #endif
     }
 }

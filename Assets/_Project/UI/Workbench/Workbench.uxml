@@ -7,13 +7,11 @@
 
             <!-- sağ üstte seviye ve bütçe hapları -->
             <ui:VisualElement class="bench-meta">
-                <ui:VisualElement class="bench-pill">
-                    <ui:Label text="Sv" class="bench-pill-caption" />
-                    <ui:Label name="bench-level" text="1" class="bench-pill-value" />
-                </ui:VisualElement>
                 <ui:VisualElement class="bench-pill bench-pill-money">
-                    <ui:VisualElement class="bench-coin" />
-                    <ui:Label name="bench-money" text="0 TL" class="bench-pill-value" />
+                    <ui:VisualElement class="bench-coin">
+                        <ui:Label text="$" class="coin-glyph" />
+                    </ui:VisualElement>
+                    <ui:Label name="bench-money" text="$0" class="bench-pill-value" />
                 </ui:VisualElement>
             </ui:VisualElement>
 

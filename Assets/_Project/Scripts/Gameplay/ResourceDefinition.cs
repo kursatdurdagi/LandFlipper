@@ -22,6 +22,9 @@ namespace LandFlipper.Gameplay
 
     public static class Currency
     {
-        public static string Format(int amount) => $"{amount:N0} TL";
+        public const string Symbol = "$";
+        /// <summary>Dolar biçimi: 1250 → "$1,250", -40 → "-$40".</summary>
+        public static string Format(int amount) =>
+            (amount < 0 ? "-" : "") + Symbol + System.Math.Abs((long)amount).ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
     }
 }

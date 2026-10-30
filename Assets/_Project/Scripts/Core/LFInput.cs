@@ -71,7 +71,7 @@ namespace LandFlipper.Core
             Sprint = Button("Sprint", "<Keyboard>/leftShift", "<Gamepad>/leftStickPress");
             Primary = Button("Primary", "<Mouse>/leftButton", "<Gamepad>/rightTrigger");
             Interact = Button("Interact", "<Keyboard>/e", "<Gamepad>/buttonWest");
-            Drop = Button("Drop", "<Keyboard>/r", "<Gamepad>/buttonEast");
+            Drop = Button("Drop", "<Keyboard>/f", "<Gamepad>/buttonEast");
             ToggleView = Button("ToggleView", "<Keyboard>/v", "<Gamepad>/select");
             SkillTree = Button("SkillTree", "<Keyboard>/tab", "<Gamepad>/dpad/up");
             Pause = Button("Pause", "<Keyboard>/escape", "<Gamepad>/start");

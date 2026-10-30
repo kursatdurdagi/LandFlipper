@@ -214,7 +214,9 @@ MonoBehaviour:
   fingerCurl: 62
   thumbCurlAxis: {x: 0, y: 0, z: 1}
   thumbCurl: 25
-  firstPersonOffset: {x: -0.04, y: 0.27, z: 0.12}
+  sfx: {fileID: 11400000, guid: ea4bf0ae778880545b946e93d1ba4913, type: 2}
+  shearsRoll: 0
+  firstPersonOffset: {x: -0.04, y: 0.24, z: 0.06}
 --- !u!114 &1078815309258171699
 MonoBehaviour:
   m_ObjectHideFlags: 0

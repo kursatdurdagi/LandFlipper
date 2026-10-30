@@ -3,7 +3,7 @@ using UnityEngine;
 namespace LandFlipper.Gameplay.Effects
 {
     /// <summary>
-    /// Dünyada yükselip kaybolan kısa metin (ör. satışta "+15 TL"). Sadece görsel; ağ durumu taşımaz.
+    /// Dünyada yükselip kaybolan kısa metin (ör. satışta "+$15"). Sadece görsel; ağ durumu taşımaz.
     /// </summary>
     public class FloatingText : MonoBehaviour
     {

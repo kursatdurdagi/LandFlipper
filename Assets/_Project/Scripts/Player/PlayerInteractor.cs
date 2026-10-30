@@ -119,7 +119,8 @@ namespace LandFlipper.Player
             Prompt = BuildPrompt();
 
             UpdatePendingHit();
-            if (primaryAction.WasPressedThisFrame()) OnPrimary();
+            if (primaryAction.WasPressedThisFrame()) OnPrimary(true);
+            else if (primaryAction.IsPressed()) OnPrimary(false); // basılı tutunca balta/çekiç savrulmaya devam eder
             UpdateHold();
             if (interactAction.WasPressedThisFrame()) OnInteract();
             UpdateSellHold();
@@ -240,7 +241,7 @@ namespace LandFlipper.Player
                 if (TargetNode.HoldDuration > 0f)
                     return $"[{primaryKey} basılı tut] {TargetNode.ActionVerb} · {TargetNode.DisplayName}{toolName}";
                 string progress = TargetNode.MaxHits > 1 ? $" ({TargetNode.HitsTaken}/{TargetNode.MaxHits})" : string.Empty;
-                return $"[{primaryKey}] {TargetNode.ActionVerb} · {TargetNode.DisplayName}{progress}{toolName}";
+                return $"[{primaryKey} basılı tut] {TargetNode.ActionVerb} · {TargetNode.DisplayName}{progress}{toolName}";
             }
 
             return carry.IsCarrying ? $"[{dropKey}] Bırak · Basılı tut: hepsini bırak" : string.Empty;
@@ -248,12 +249,13 @@ namespace LandFlipper.Player
 
         // ------------------------------------------------------------ actions
 
-        void OnPrimary()
+        void OnPrimary(bool pressedNow)
         {
             if (TargetNode == null) return;
             if (carry.IsCarrying)
             {
-                Notification?.Invoke("Elinde yük varken kesemez/kıramazsın. Önce R ile bırak.");
+                if (pressedNow)
+                    Notification?.Invoke($"Elinde yük varken kesemez/kıramazsın. Önce {LFInput.KeyLabel(LFInput.Drop)} ile bırak.");
                 return;
             }
             if (TargetNode.HoldDuration > 0f) return; // basılı tutma UpdateHold'da işlenir
@@ -263,7 +265,7 @@ namespace LandFlipper.Player
             nextHitTime = Time.time + duration;
 
             // Alet ele gelir ve savrulur; vuruş, alet hedefe değdiği anda gönderilir.
-            float impactDelay = tools != null ? tools.BeginSwing(ToolDefinition.KindFor(TargetNode.Kind), duration) : 0f;
+            float impactDelay = tools != null ? tools.BeginSwing(ToolDefinition.KindFor(TargetNode.Kind), duration, SfxLibrary.ForNode(TargetNode.Kind)) : 0f;
             pendingHitId = TargetNode.ObjectId;
             pendingHitKind = TargetNode.Kind;
             pendingHitTime = Time.time + impactDelay;
@@ -273,7 +275,6 @@ namespace LandFlipper.Player
         void UpdatePendingHit()
         {
             if (pendingHitId < 0 || Time.time < pendingHitTime) return;
-            controller.Kick(pendingHitKind == NodeKind.Grass || pendingHitKind == NodeKind.Bush ? 1.2f : 2.5f);
             CmdHit(pendingHitId);
             pendingHitId = -1;
         }
@@ -319,13 +320,11 @@ namespace LandFlipper.Player
             if (holdTime >= nextHoldFeedback)
             {
                 nextHoldFeedback = holdTime + 0.28f;
-                controller.Kick(0.5f);
                 holdNode.PlayHitFeedback();
             }
 
             if (holdTime >= duration)
             {
-                controller.Kick(1.4f);
                 CmdHit(holdNode.ObjectId);
                 ResetHold();
             }
@@ -449,7 +448,7 @@ namespace LandFlipper.Player
 
             // Alet kademesi vuruş gücünü belirler (biçmede tek vuruş yeter).
             var tool = CareerState.Tool(ToolDefinition.KindFor(node.Kind));
-            int damage = node.HoldDuration > 0f || tool == null ? 1 : tool.Damage;
+            int damage = node.HoldDuration > 0f ? node.MaxHits : tool != null ? tool.Damage : 1;
             world.ServerApplyHit(objectId, transform.position, damage);
         }
 

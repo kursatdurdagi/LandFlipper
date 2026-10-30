@@ -323,3 +323,16 @@
 .unity-scroll-view .unity-scroller--vertical .unity-base-slider__dragger-border {
     display: none;
 }
+
+/* ---------------------------------------------------------------- dolar parası */
+
+.coin-glyph {
+    font-size: 17px;
+    -unity-font-style: bold;
+    color: var(--cream);
+    -unity-text-align: middle-center;
+    padding: 0;
+    margin: 0 0 1px 0;
+    -unity-text-outline-width: 0.6px;
+    -unity-text-outline-color: var(--leaf-lip);
+}

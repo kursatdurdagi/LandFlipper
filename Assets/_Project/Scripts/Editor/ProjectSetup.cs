@@ -359,11 +359,14 @@ namespace LandFlipper.EditorTools
             return new[]
             {
                 Tool("TL_Shears0", "shears_kid", ToolKind.Shears, 0, "Çocuk Makası", "Küçük, kör uçlu bir okul makası. Çimi zar zor keser.",
-                    0, 1, 1f, Shears(0.085f, 0.045f, 0.02f, metal, plasticRed, plasticBlue, 0.05f)),
+                    0, 1, 1f, Shears(0.085f, 0.045f, 0.02f, metal, plasticRed, plasticBlue, 0.05f),
+                    ModelShears("child_scissor", "Shears_Child", 0.17f, 22f)),
                 Tool("TL_Shears1", "shears_tailor", ToolKind.Shears, 1, "Terzi Makası", "Uzun ve keskin ağızlar; çimi çok daha hızlı biçer.",
-                    120, 2, 1.8f, Shears(0.13f, 0.06f, 0.02f, steel, handleBlack, handleBlack, 0.045f)),
+                    120, 2, 1.8f, Shears(0.13f, 0.06f, 0.02f, steel, handleBlack, handleBlack, 0.045f),
+                    ModelShears("adultscissor", "Shears_Adult", 0.25f, 18f)),
                 Tool("TL_Shears2", "shears_garden", ToolKind.Shears, 2, "Bahçe Makası", "Uzun saplı budama makası. Çim ve çalılar için ideal.",
-                    380, 4, 3f, Shears(0.17f, 0.2f, 0.035f, metalDark, handleGreen, handleGreen, 0.05f)),
+                    380, 4, 3f, Shears(0.17f, 0.2f, 0.035f, metalDark, handleGreen, handleGreen, 0.05f),
+                    ModelShears("gardenscissor", "Shears_Garden", 0.5f, 16f)),
 
                 Tool("TL_Axe0", "axe_stone", ToolKind.Axe, 0, "Taş Balta", "Sopaya bağlanmış yontma taş. Ağaçları yavaş keser.",
                     0, 1, 1f, Axe(0.5f, kit.Wood, stone, new Vector3(0.06f, 0.1f, 0.13f), stone, true)),
@@ -381,8 +384,62 @@ namespace LandFlipper.EditorTools
             };
         }
 
+        /// <summary>Art/Models altındaki sanatçı makas modelinden alet prefab'ı (yoksa null → dummy kalır).</summary>
+        /// <summary>SFx/Cuts altındaki tek vuruşluk sesleri (Wood_*, Rock_*, Snip_*) kütüphaneye bağlar.</summary>
+        static SfxLibrary CreateSfxLibrary()
+        {
+            const string cuts = Root + "/SFx/Cuts";
+            const string path = Root + "/Data/SfxLibrary.asset";
+            var library = AssetDatabase.LoadAssetAtPath<SfxLibrary>(path);
+            if (library == null)
+            {
+                library = ScriptableObject.CreateInstance<SfxLibrary>();
+                AssetDatabase.CreateAsset(library, path);
+            }
+
+            AudioClip[] Load(string prefix)
+            {
+                var list = new List<AudioClip>();
+                if (!AssetDatabase.IsValidFolder(cuts)) return list.ToArray();
+                foreach (var guid in AssetDatabase.FindAssets($"{prefix}_ t:AudioClip", new[] { cuts }))
+                {
+                    string clipPath = AssetDatabase.GUIDToAssetPath(guid);
+                    if (AssetImporter.GetAtPath(clipPath) is AudioImporter importer)
+                    {
+                        // kısa vuruşlar: belleğe açık yükle → Play() anında başlar, gecikme olmaz
+                        var settings = importer.defaultSampleSettings;
+                        if (settings.loadType != AudioClipLoadType.DecompressOnLoad || !importer.forceToMono)
+                        {
+                            settings.loadType = AudioClipLoadType.DecompressOnLoad;
+                            settings.compressionFormat = AudioCompressionFormat.ADPCM;
+                            importer.defaultSampleSettings = settings;
+                            importer.forceToMono = true;
+                            importer.SaveAndReimport();
+                        }
+                    }
+                    var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(clipPath);
+                    if (clip != null) list.Add(clip);
+                }
+                list.Sort((x, y) => string.CompareOrdinal(x.name, y.name));
+                return list.ToArray();
+            }
+
+            library.wood = Load("Wood");
+            library.rock = Load("Rock");
+            library.snip = Load("Snip");
+            EditorUtility.SetDirty(library);
+            return library;
+        }
+
+        static GameObject ModelShears(string model, string prefabName, float length, float openAngle)
+        {
+            string modelPath = $"Assets/_Project/Art/Models/{model}.fbx";
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(modelPath) == null) return null;
+            return ToolModelBuilder.BuildShears(modelPath, $"{ToolPrefabFolder}/{prefabName}.prefab", length, openAngle);
+        }
+
         static ToolDefinition Tool(string asset, string id, ToolKind kind, int tier, string name, string description,
-            int price, int requiredLevel, float power, System.Action<GameObject> buildVisual)
+            int price, int requiredLevel, float power, System.Action<GameObject> buildVisual, GameObject modelPrefab = null)
         {
             string path = $"{ToolsFolder}/{asset}.asset";
             var tool = AssetDatabase.LoadAssetAtPath<ToolDefinition>(path);
@@ -408,7 +465,13 @@ namespace LandFlipper.EditorTools
             buildVisual(root);
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
             Object.DestroyImmediate(root);
-            if (tool.visualPrefab == null || AssetDatabase.GetAssetPath(tool.visualPrefab) == prefabPath)
+            if (modelPrefab != null)
+            {
+                tool.visualPrefab = modelPrefab;                 // sanatçı modeli her zaman öncelikli
+                tool.gripPositionOffset = Vector3.zero;
+                tool.gripEulerOffset = Vector3.zero;
+            }
+            else if (tool.visualPrefab == null || AssetDatabase.GetAssetPath(tool.visualPrefab) == prefabPath)
                 tool.visualPrefab = prefab;
 
             EditorUtility.SetDirty(tool);
@@ -607,7 +670,9 @@ namespace LandFlipper.EditorTools
             var firstPersonArms = arms.AddComponent<FirstPersonArms>();
             firstPersonArms.EditorSetup(controller, playerCarry, viewAnchor.transform);
             player.AddComponent<PlayerSkills>();
-            player.AddComponent<PlayerTools>().EditorSetup(animator, firstPersonArms, pivot.transform);
+            var playerTools = player.AddComponent<PlayerTools>();
+            playerTools.EditorSetup(animator, firstPersonArms, pivot.transform);
+            playerTools.EditorSetSfx(CreateSfxLibrary());
             var interactor = player.AddComponent<PlayerInteractor>();
             interactor.EditorSetMask(~((1 << playerLayer) | (1 << 2)));
 

@@ -131,8 +131,7 @@ namespace LandFlipper.Gameplay
         {
             var next = NextTool(kind);
             if (next == null) { reason = "En iyi alete sahipsin"; return false; }
-            if (level < next.requiredLevel) { reason = $"Seviye {next.requiredLevel} gerekli"; return false; }
-            if (money < next.price) { reason = $"Yetersiz bütçe ({next.price} TL gerekli)"; return false; }
+            if (money < next.price) { reason = $"Yetersiz bütçe ({Currency.Format(next.price)} gerekli)"; return false; }
             reason = null;
             return true;
         }

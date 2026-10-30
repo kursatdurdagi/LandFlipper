@@ -8,11 +8,14 @@ namespace LandFlipper.Gameplay
     {
         [SerializeField] Collider bushCollider;
         [SerializeField] int baleCount = 1;
+        [Tooltip("Başlangıç makasıyla basılı tutma süresi (sn). Makas kademesi kısaltır.")]
+        [SerializeField] float cutDuration = 1.8f;
 
         Vector3 visualRestScale;
 
         public override NodeKind Kind => NodeKind.Bush;
-        public override string ActionVerb => "Kır";
+        public override string ActionVerb => "Kes";
+        public override float HoldDuration => cutDuration;
         public override string DisplayName => "Çalı";
         public int BaleCount => baleCount;
 

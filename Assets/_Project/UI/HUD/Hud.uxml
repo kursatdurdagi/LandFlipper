@@ -22,8 +22,10 @@
 
         <!-- sağ üst: bütçe -->
         <ui:VisualElement name="money-panel" class="hud-plate hud-money" picking-mode="Ignore">
-            <ui:VisualElement class="hud-coin" picking-mode="Ignore" />
-            <ui:Label name="money-label" text="0 TL" class="hud-money-value" picking-mode="Ignore" />
+            <ui:VisualElement class="hud-coin" picking-mode="Ignore">
+                <ui:Label text="$" class="coin-glyph" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:Label name="money-label" text="$0" class="hud-money-value" picking-mode="Ignore" />
         </ui:VisualElement>
 
         <!-- sağ alt: taşınan yük -->

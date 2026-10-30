@@ -22,6 +22,6 @@ MonoBehaviour:
   price: 120
   requiredLevel: 2
   power: 1.8
-  visualPrefab: {fileID: 1579659713685866630, guid: 73b3731890c54884a9f574f7cf56ec1e, type: 3}
+  visualPrefab: {fileID: 6123868835726354089, guid: c44a19e88cabe364ca01622eced1baa2, type: 3}
   gripPositionOffset: {x: 0, y: 0, z: 0}
   gripEulerOffset: {x: 0, y: 0, z: 0}
