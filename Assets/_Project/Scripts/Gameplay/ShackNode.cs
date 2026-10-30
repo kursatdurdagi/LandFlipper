@@ -1,4 +1,5 @@
 using System.Collections;
+using LandFlipper.Gameplay.Effects;
 using UnityEngine;
 
 namespace LandFlipper.Gameplay
@@ -47,6 +48,7 @@ namespace LandFlipper.Gameplay
         IEnumerator PopOut(Transform part)
         {
             foreach (var c in part.GetComponentsInChildren<Collider>()) c.enabled = false;
+            StylizedFx.PartRemoved(part.position + Vector3.up * 0.3f);
             Vector3 startScale = part.localScale;
             Vector3 startPos = part.localPosition;
             const float duration = 0.3f;

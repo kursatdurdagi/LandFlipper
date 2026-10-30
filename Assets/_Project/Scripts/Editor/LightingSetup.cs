@@ -19,7 +19,7 @@ namespace LandFlipper.EditorTools
         const string SunFlarePath = SettingsFolder + "/LF_SunFlare.asset";
 
         // Ortak renk paleti
-        static readonly Color SunColor = new Color(1f, 0.88f, 0.72f);
+        static readonly Color SunColor = new Color(1f, 0.9f, 0.76f);
         static readonly Color SkyTint = new Color(0.52f, 0.66f, 0.86f);
         static readonly Color HorizonFog = new Color(0.80f, 0.86f, 0.88f);
 
@@ -45,16 +45,20 @@ namespace LandFlipper.EditorTools
             var urp = (QualitySettings.renderPipeline ?? GraphicsSettings.defaultRenderPipeline) as UniversalRenderPipelineAsset;
             if (urp == null) return;
 
-            urp.shadowDistance = 90f;
-            urp.shadowCascadeCount = 4;
+            // Optimize: 3 kademe / 70 m / 2048 birinci şahıs kamerada 4×4096 ile neredeyse aynı görünür, çok daha ucuz
+            urp.shadowDistance = 70f;
+            urp.shadowCascadeCount = 3;
             urp.supportsHDR = true;
             urp.supportsCameraDepthTexture = true; // güneş parlamasının ağaç/arazi arkasında kalması (occlusion)
 
             var so = new SerializedObject(urp);
-            SetFloat(so, "m_MainLightShadowmapResolution", 4096);
+            SetFloat(so, "m_MainLightShadowmapResolution", 2048);
             SetBool(so, "m_SoftShadowsSupported", true);
             SetFloat(so, "m_SoftShadowQuality", 2); // orta
             SetBool(so, "m_SupportDataDrivenLensFlare", true);
+            // tek bake'li yansıma probu: kutu izdüşümü ile tezgâh/örs/taşlarda doğru konumlu hafif yansıma
+            SetBool(so, "m_ReflectionProbeBlending", true);
+            SetBool(so, "m_ReflectionProbeBoxProjection", true);
             so.ApplyModifiedPropertiesWithoutUndo();
 
             // SSAO: low poly yüzeylerin birleşim yerlerinde yumuşak derinlik
@@ -67,9 +71,9 @@ namespace LandFlipper.EditorTools
                 {
                     if (feature == null || feature.GetType().Name != "ScreenSpaceAmbientOcclusion") continue;
                     var fso = new SerializedObject(feature);
-                    SetFloat(fso, "m_Settings.Intensity", 1.6f);
-                    SetFloat(fso, "m_Settings.Radius", 0.4f);
-                    SetFloat(fso, "m_Settings.DirectLightingStrength", 0.35f);
+                    SetFloat(fso, "m_Settings.Intensity", 1.3f);
+                    SetFloat(fso, "m_Settings.Radius", 0.35f);
+                    SetFloat(fso, "m_Settings.DirectLightingStrength", 0.25f);
                     fso.ApplyModifiedPropertiesWithoutUndo();
                     feature.SetActive(true);
                 }
@@ -100,9 +104,10 @@ namespace LandFlipper.EditorTools
             tone.mode.Override(TonemappingMode.Neutral);
 
             var color = Add<ColorAdjustments>(profile);
-            color.postExposure.Override(0.05f);
-            color.contrast.Override(16f);
-            color.saturation.Override(8f);
+            // stylized realism: canlı ama bağırmayan renkler
+            color.postExposure.Override(0.08f);
+            color.contrast.Override(13f);
+            color.saturation.Override(5f);
             color.colorFilter.Override(new Color(1f, 0.985f, 0.95f));
 
             var white = Add<WhiteBalance>(profile);
@@ -116,8 +121,8 @@ namespace LandFlipper.EditorTools
             smh.highlights.Override(new Vector4(1.04f, 1.01f, 0.95f, 0f));
 
             var bloom = Add<Bloom>(profile);
-            bloom.threshold.Override(1.05f);
-            bloom.intensity.Override(0.35f);
+            bloom.threshold.Override(1.0f);
+            bloom.intensity.Override(0.4f);
             bloom.scatter.Override(0.65f);
             bloom.tint.Override(new Color(1f, 0.93f, 0.82f));
 
@@ -188,9 +193,9 @@ namespace LandFlipper.EditorTools
             {
                 sun.type = LightType.Directional;
                 sun.color = SunColor;
-                sun.intensity = 1.65f;
+                sun.intensity = 1.75f;
                 sun.shadows = LightShadows.Soft;
-                sun.shadowStrength = 0.82f;
+                sun.shadowStrength = 0.78f;
                 sun.shadowBias = 0.04f;
                 sun.shadowNormalBias = 0.35f;
                 // alçak, sıcak öğleden sonra açısı: uzun yumuşak gölgeler
@@ -202,19 +207,72 @@ namespace LandFlipper.EditorTools
             if (skybox != null) RenderSettings.skybox = skybox;
 
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.60f, 0.70f, 0.86f);
-            RenderSettings.ambientEquatorColor = new Color(0.66f, 0.66f, 0.56f);
-            RenderSettings.ambientGroundColor = new Color(0.36f, 0.32f, 0.24f);
+            // gökten serin mavi, ufuktan sıcak yeşil sekme (çimden yansıyan ışık), yerden toprak
+            RenderSettings.ambientSkyColor = new Color(0.62f, 0.72f, 0.88f);
+            RenderSettings.ambientEquatorColor = new Color(0.68f, 0.70f, 0.56f);
+            RenderSettings.ambientGroundColor = new Color(0.40f, 0.36f, 0.26f);
             RenderSettings.ambientIntensity = 1f;
 
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
             RenderSettings.fogColor = HorizonFog;
-            RenderSettings.fogStartDistance = 40f;
-            RenderSettings.fogEndDistance = 180f;
+            RenderSettings.fogStartDistance = 35f;
+            RenderSettings.fogEndDistance = 170f;
 
             RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
-            RenderSettings.reflectionIntensity = 0.6f;
+            RenderSettings.reflectionIntensity = 0.75f;
+            RenderSettings.defaultReflectionResolution = 128;
+        }
+
+        // ------------------------------------------------------------ yansıma
+
+        /// <summary>
+        /// Araziyi kapsayan tek yansıma probu. Kurulumda bir kez bake edilir (Custom doku), çalışma
+        /// zamanında hiç render maliyeti yoktur. Kutu izdüşümü ile yansımalar konuma oturur.
+        /// </summary>
+        public static ReflectionProbe AddReflectionProbe(Vector3 center, Vector3 size, string texturePath)
+        {
+            var go = new GameObject("Reflection Probe (Plot)");
+            go.transform.position = center;
+            var probe = go.AddComponent<ReflectionProbe>();
+            probe.mode = ReflectionProbeMode.Custom;
+            probe.size = size;
+            probe.boxProjection = true;
+            probe.resolution = 128;
+            probe.hdr = true;
+            probe.importance = 1;
+            probe.intensity = 1f;
+            probe.blendDistance = 2f;
+            probe.nearClipPlane = 0.3f;
+            probe.farClipPlane = 250f;
+            probe.clearFlags = ReflectionProbeClearFlags.Skybox;
+            probe.shadowDistance = 60f;
+
+            LowPolyWorldBuilder.EnsureFolder(System.IO.Path.GetDirectoryName(texturePath).Replace('\\', '/'));
+            if (Lightmapping.BakeReflectionProbe(probe, texturePath))
+            {
+                AssetDatabase.ImportAsset(texturePath);
+                probe.customBakedTexture = AssetDatabase.LoadAssetAtPath<Texture>(texturePath);
+            }
+            else Debug.LogWarning("[LandFlipper] Yansıma probu bake edilemedi; gökyüzü yansıması kullanılacak.");
+            return probe;
+        }
+
+        /// <summary>
+        /// Yüzeylere hafif, malzemeye göre parlaklık: metal örs/mengene belirgin, taş ve yaprakta yumuşak
+        /// bir ışıltı, ahşapta çok az. Gerçekçi değil "stylized realism": parlama noktaları küçük ve sıcak.
+        /// </summary>
+        public static void TuneSurface(Material m, float smoothness, float metallic = 0f, bool highlights = true)
+        {
+            if (m == null) return;
+            m.SetFloat("_Smoothness", smoothness);
+            m.SetFloat("_Metallic", metallic);
+            m.SetFloat("_SpecularHighlights", highlights ? 1f : 0f);
+            if (highlights) m.DisableKeyword("_SPECULARHIGHLIGHTS_OFF");
+            else m.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
+            m.SetFloat("_EnvironmentReflections", 1f);
+            m.DisableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
+            EditorUtility.SetDirty(m);
         }
 
         // ------------------------------------------------------------ güneş parlaması

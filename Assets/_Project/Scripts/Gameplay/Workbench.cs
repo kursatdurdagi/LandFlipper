@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using LandFlipper.Gameplay.Effects;
 using UnityEngine;
 
 namespace LandFlipper.Gameplay
@@ -46,6 +47,7 @@ namespace LandFlipper.Gameplay
         void OnToolUpgraded(ToolKind kind, ToolDefinition tool)
         {
             if (bounceTarget == null || !isActiveAndEnabled) return;
+            StylizedFx.Upgraded(bounceTarget.position + Vector3.up * 0.35f);
             if (bounceRoutine != null) StopCoroutine(bounceRoutine);
             bounceRoutine = StartCoroutine(Bounce());
         }

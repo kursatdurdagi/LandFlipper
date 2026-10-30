@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2102d43925c47b5469122388bae69502, type: 3}
+  m_Name: LF_FxLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::LandFlipper.Gameplay.Effects.FxLibrary
+  puff: {fileID: 2100000, guid: 3f9c1670632ba77498bd8a142e7b7b9e, type: 2}
+  chip: {fileID: 2100000, guid: 4ad07ab5b695c0140be17b92dc6b4cbe, type: 2}
+  leaf: {fileID: 2100000, guid: 9977d76ec931fd247a83f4917621a4a1, type: 2}
+  sparkle: {fileID: 2100000, guid: 77f365130663e274589b4da5a65c4f20, type: 2}
+  mote: {fileID: 2100000, guid: 397bf256d74dee04dbf5611cb28c6915, type: 2}
+  ambientMotes: 60
+  ambientRadius: 14

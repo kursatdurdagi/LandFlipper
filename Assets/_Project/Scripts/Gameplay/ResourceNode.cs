@@ -1,4 +1,5 @@
 using System.Collections;
+using LandFlipper.Gameplay.Effects;
 using UnityEngine;
 
 namespace LandFlipper.Gameplay
@@ -62,12 +63,14 @@ namespace LandFlipper.Gameplay
             IsDepleted = state.depleted;
             HitsTaken = state.hitsTaken;
             OnStateApplied(state, animate && !wasDepleted);
+            if (animate && !wasDepleted && IsDepleted) StylizedFx.NodeDepleted(this);
         }
 
         protected abstract void OnStateApplied(NodeState state, bool animate);
 
         public virtual void PlayHitFeedback()
         {
+            StylizedFx.NodeHit(this);
             if (visualRoot == null || !isActiveAndEnabled) return;
             if (shakeRoutine != null) StopCoroutine(shakeRoutine);
             shakeRoutine = StartCoroutine(Shake());

@@ -85,6 +85,7 @@ namespace LandFlipper.EditorTools
             volumeProfile = LightingSetup.CreateProfile();
             skyMaterial = LightingSetup.CreateSkybox();
             LightingSetup.CreateSunFlare();
+            FxSetup.CreateLibrary();
 
             var panelSettings = CreatePanelSettings();
             var kit = LowPolyWorldBuilder.LoadKit();
@@ -408,10 +409,10 @@ namespace LandFlipper.EditorTools
                     {
                         // kısa vuruşlar: belleğe açık yükle → Play() anında başlar, gecikme olmaz
                         var settings = importer.defaultSampleSettings;
-                        if (settings.loadType != AudioClipLoadType.DecompressOnLoad || !importer.forceToMono)
+                        if (settings.loadType != AudioClipLoadType.DecompressOnLoad || settings.compressionFormat != AudioCompressionFormat.PCM || !importer.forceToMono)
                         {
                             settings.loadType = AudioClipLoadType.DecompressOnLoad;
-                            settings.compressionFormat = AudioCompressionFormat.ADPCM;
+                            settings.compressionFormat = AudioCompressionFormat.PCM;
                             importer.defaultSampleSettings = settings;
                             importer.forceToMono = true;
                             importer.SaveAndReimport();
@@ -752,6 +753,10 @@ namespace LandFlipper.EditorTools
             uiGo.AddComponent<MainMenuController>();
             AddSettingsDocument(uiRoot, panelSettings);
 
+            FxSetup.AddAmbient();
+            LightingSetup.AddReflectionProbe(new Vector3(0f, 3f, 1f), new Vector3(30f, 14f, 30f),
+                "Assets/_Project/Art/Generated/ReflectionProbe_Menu.exr");
+
             EditorSceneManager.SaveScene(scene, MainMenuScenePath);
         }
 
@@ -835,6 +840,10 @@ namespace LandFlipper.EditorTools
             AddDocument(menuGo, panelSettings, GameMenuUxmlPath, 10);
             menuGo.AddComponent<GameMenuController>();
             AddSettingsDocument(uiRoot, panelSettings);
+
+            FxSetup.AddAmbient();
+            LightingSetup.AddReflectionProbe(new Vector3(0f, 3f, 0f), new Vector3(h * 2f + 8f, 16f, h * 2f + 8f),
+                "Assets/_Project/Art/Generated/ReflectionProbe_Game.exr");
 
             EditorSceneManager.SaveScene(scene, GameScenePath);
         }

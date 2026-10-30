@@ -58,7 +58,10 @@ namespace LandFlipper.Gameplay
             var source = NextSource();
             source.transform.position = position;
             source.spatialBlend = spatial;
-            source.pitch = 1f + Random.Range(-pitchJitter, pitchJitter);
+            // makas: perde yukarı kaymasın (tizlik artar), çok az aşağı oynasın
+            source.pitch = kind == SfxKind.Snip
+                ? 1f - Random.Range(0f, pitchJitter * 0.5f)
+                : 1f + Random.Range(-pitchJitter, pitchJitter);
             source.volume = volume * volumeScale;
             source.clip = clip;
             source.Play();

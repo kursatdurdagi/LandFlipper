@@ -96,6 +96,20 @@ namespace LandFlipper.EditorTools
             }
             foreach (var f in pb.faces)
                 f.smoothingGroup = f.submeshIndex == hardSubmesh ? 0 : 1;
+
+            // ProBuilder submesh indeksini renderer'daki malzeme sayısına kırpar. Tek malzemeyle kütük/gövde uçları
+            // submesh 1'e gidemez, her şey submesh 0 olurdu; iki malzemeli prefab da son submesh'i iki kez çizip
+            // (kabuk + halka dokusu üst üste) bozuk görünürdü. Gereken kadar malzeme yuvası aç.
+            int needed = 1;
+            foreach (var f in pb.faces) needed = Mathf.Max(needed, f.submeshIndex + 1);
+            var renderer = pb.GetComponent<MeshRenderer>();
+            if (renderer != null && renderer.sharedMaterials.Length < needed)
+            {
+                var slots = new Material[needed];
+                var first = renderer.sharedMaterials.Length > 0 ? renderer.sharedMaterials[0] : null;
+                for (int i = 0; i < needed; i++) slots[i] = first;
+                renderer.sharedMaterials = slots;
+            }
             pb.ToMesh();
             pb.Refresh();
             var mesh = UnityEngine.Object.Instantiate(pb.GetComponent<MeshFilter>().sharedMesh);
@@ -408,16 +422,107 @@ namespace LandFlipper.EditorTools
             return c;
         }
 
+        static readonly Dictionary<int, Mesh> flapCache = new Dictionary<int, Mesh>();
+
+        /// <summary>
+        /// Tente saçak dili: üstü düz, altı yarım elips; ince, düz yüzlü, kenarı yumuşak normalli tek parça.
+        /// Düzlem XY, kalınlık Z (ön yüz -Z). Üst kenar y = 0, aşağı sarkar. Komşu dillerle ve tahtayla kesişmez.
+        /// </summary>
+        public static Mesh AwningFlap(float width, float rectHeight, float dropHeight, float thickness)
+        {
+            int key = Mathf.RoundToInt(width * 1000f) * 31 + Mathf.RoundToInt(dropHeight * 1000f);
+            if (flapCache.TryGetValue(key, out var cached) && cached != null) return cached;
+
+            const int arc = 14;
+            float rx = width * 0.5f;
+            var pts = new List<Vector2> { new Vector2(-rx, 0f), new Vector2(-rx, -rectHeight) };
+            for (int i = 1; i < arc; i++)
+            {
+                float a = Mathf.PI + Mathf.PI * i / arc;                 // π → 2π: alt yarı
+                pts.Add(new Vector2(rx * Mathf.Cos(a), -rectHeight + dropHeight * Mathf.Sin(a)));
+            }
+            pts.Add(new Vector2(rx, -rectHeight));
+            pts.Add(new Vector2(rx, 0f));
+
+            float ht = thickness * 0.5f;
+            var v = new List<Vector3>();
+            var n = new List<Vector3>();
+            var uv = new List<Vector2>();
+            var tris = new List<int>();
+            Vector2 center = new Vector2(0f, -rectHeight * 0.5f);
+            const float tile = 2.2f;
+
+            // ön (-Z) ve arka (+Z) yüzler: merkezden yelpaze
+            for (int side = 0; side < 2; side++)
+            {
+                float z = side == 0 ? -ht : ht;
+                Vector3 nz = side == 0 ? Vector3.back : Vector3.forward;
+                int c = v.Count;
+                v.Add(new Vector3(center.x, center.y, z)); n.Add(nz); uv.Add(center * tile);
+                for (int i = 0; i < pts.Count; i++)
+                {
+                    v.Add(new Vector3(pts[i].x, pts[i].y, z)); n.Add(nz); uv.Add(pts[i] * tile);
+                }
+                for (int i = 0; i < pts.Count - 1; i++)
+                {
+                    int p0 = c + 1 + i, p1 = c + 2 + i;
+                    if (side == 0) { tris.Add(c); tris.Add(p1); tris.Add(p0); }   // -Z'ye bakar
+                    else { tris.Add(c); tris.Add(p0); tris.Add(p1); }
+                }
+            }
+
+            // kenar şeridi (üst kenar hariç: tahtanın içinde kalır)
+            var edgeNormals = new Vector2[pts.Count];
+            for (int i = 0; i < pts.Count; i++)
+            {
+                Vector2 prev = pts[Mathf.Max(0, i - 1)], next = pts[Mathf.Min(pts.Count - 1, i + 1)];
+                Vector2 d = (next - prev).normalized;
+                edgeNormals[i] = new Vector2(d.y, -d.x);
+            }
+            float run = 0f;
+            for (int i = 1; i < pts.Count - 2; i++)
+            {
+                int b = v.Count;
+                Vector2 p0 = pts[i], p1 = pts[i + 1];
+                float len = (p1 - p0).magnitude;
+                Vector3 n0 = edgeNormals[i], n1 = edgeNormals[i + 1];
+                v.Add(new Vector3(p0.x, p0.y, -ht)); n.Add(n0); uv.Add(new Vector2(run, 0f));
+                v.Add(new Vector3(p1.x, p1.y, -ht)); n.Add(n1); uv.Add(new Vector2(run + len, 0f));
+                v.Add(new Vector3(p1.x, p1.y, ht)); n.Add(n1); uv.Add(new Vector2(run + len, thickness));
+                v.Add(new Vector3(p0.x, p0.y, ht)); n.Add(n0); uv.Add(new Vector2(run, thickness));
+                tris.Add(b); tris.Add(b + 1); tris.Add(b + 2);
+                tris.Add(b); tris.Add(b + 2); tris.Add(b + 3);
+                run += len;
+            }
+
+            var mesh = new Mesh { name = $"SAwningFlap_{key}" };
+            mesh.SetVertices(v);
+            mesh.SetNormals(n);
+            mesh.SetUVs(0, uv);
+            mesh.SetTriangles(tris, 0);
+            mesh.RecalculateTangents();
+            mesh.RecalculateBounds();
+            mesh = LowPolyWorldBuilder.SaveMesh(mesh, mesh.name);
+            flapCache[key] = mesh;
+            return mesh;
+        }
+
         static void MarkCaps(ProBuilderMesh pb, Vector3 direction, int submesh)
         {
             var positions = pb.positions;
+            // Merkez: köşelerin ortalaması. (pb.transform.position kullanılamaz: Center pivotunda obje yüksekliğin
+            // yarısı kadar kayık doğar, bu yüzden üst uç hiç, alt uç yanlış seçilirdi.)
+            Vector3 center = Vector3.zero;
+            foreach (var p in positions) center += p;
+            center /= Mathf.Max(1, positions.Count);
+
             foreach (var f in pb.faces)
             {
                 var idx = f.indexes;
                 if (idx.Count < 3) continue;
                 Vector3 a = positions[idx[0]], b = positions[idx[1]], c = positions[idx[2]];
                 Vector3 n = Vector3.Cross(b - a, c - a).normalized;
-                if (Mathf.Abs(Vector3.Dot(n, direction)) > 0.9f && Vector3.Dot((a + b + c) / 3f - pb.transform.position, direction) > 0f)
+                if (Mathf.Abs(Vector3.Dot(n, direction)) > 0.9f && Vector3.Dot((a + b + c) / 3f - center, direction) > 0f)
                     f.submeshIndex = submesh;
             }
         }

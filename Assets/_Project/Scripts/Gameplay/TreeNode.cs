@@ -1,4 +1,5 @@
 using System.Collections;
+using LandFlipper.Gameplay.Effects;
 using UnityEngine;
 
 namespace LandFlipper.Gameplay
@@ -64,6 +65,9 @@ namespace LandFlipper.Gameplay
         IEnumerator Fall(Vector3 direction)
         {
             stump.SetActive(true);
+            var canopy = fallPivot.Find("Canopy");
+            StylizedFx.TreeFallStart(canopy != null ? canopy.position + Vector3.up * canopyRadius * 0.4f : fallPivot.position + Vector3.up * trunkHeight,
+                canopyRadius);
             Vector3 axis = Vector3.Cross(Vector3.up, direction).normalized;
 
             for (float t = 0f; t < FallDuration; t += Time.deltaTime)
@@ -82,6 +86,7 @@ namespace LandFlipper.Gameplay
                 yield return null;
             }
 
+            StylizedFx.TreeLanded(fallPivot.position + direction * 0.6f, fallPivot.position + direction * (trunkHeight + canopyRadius * 0.6f));
             fallPivot.gameObject.SetActive(false); // kütükler host tarafından spawn edilir
 
             // kütük dibi birkaç saniye kalır, sonra kaybolur

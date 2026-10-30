@@ -22,6 +22,7 @@ namespace LandFlipper.EditorTools
             public Material Grass, OuterGrass, GrassBlade, Dirt, Bark, WoodCut, Leaves, LeavesLight, Pine, Rock, RockDark,
                 Wood, WoodDark, Roof, Straw, Twine, Bush, FlowerPink, FlowerYellow, FlowerWhite,
                 AwningRed, AwningCream, Delivery, Sign, Crate, ProduceRed, ProduceOrange, SignText;
+            public Material Flower;   // StylizedFoliage (vertex renkli, rüzgârlı)
 
             public Mesh[] RoundCanopies, PineCanopies, Trunks, Stumps, Rocks, Chunks, GrassPatches, Bushes, Flowers;
             public Mesh Log, Bale, Post, Disc, Box;
@@ -78,6 +79,29 @@ namespace LandFlipper.EditorTools
 
             // Stilize çevre: ProBuilder ile yumuşak modeller + boyalı dokular (low poly sürümün yerine)
             StylizedKit.Apply(k);
+            // Stilize çimen/çiçek: kavisli yapraklar, renk geçişi, GPU rüzgârı
+            StylizedFoliage.Apply(k);
+
+            // hafif yansıma / parlaklık (stylized realism): yaprakta ışıltı, taşta yumuşak parlama, ahşapta çok az
+            LightingSetup.TuneSurface(k.Leaves, 0.22f);
+            LightingSetup.TuneSurface(k.LeavesLight, 0.22f);
+            LightingSetup.TuneSurface(k.Pine, 0.2f);
+            LightingSetup.TuneSurface(k.Bush, 0.2f);
+            LightingSetup.TuneSurface(k.Rock, 0.26f);
+            LightingSetup.TuneSurface(k.RockDark, 0.28f);
+            LightingSetup.TuneSurface(k.Wood, 0.16f);
+            LightingSetup.TuneSurface(k.WoodDark, 0.16f);
+            LightingSetup.TuneSurface(k.WoodCut, 0.14f);
+            LightingSetup.TuneSurface(k.Bark, 0.1f, 0f, false);
+            LightingSetup.TuneSurface(k.Roof, 0.3f);
+            LightingSetup.TuneSurface(k.Sign, 0.2f);
+            LightingSetup.TuneSurface(k.Crate, 0.16f);
+            LightingSetup.TuneSurface(k.AwningRed, 0.12f);
+            LightingSetup.TuneSurface(k.AwningCream, 0.12f);
+            LightingSetup.TuneSurface(k.ProduceRed, 0.55f);
+            LightingSetup.TuneSurface(k.ProduceOrange, 0.5f);
+            LightingSetup.TuneSurface(k.Grass, 0.08f, 0f, false);
+            LightingSetup.TuneSurface(k.OuterGrass, 0.06f, 0f, false);
             return k;
         }
 
@@ -171,11 +195,21 @@ namespace LandFlipper.EditorTools
 
             // ---- dekor
             var decor = Group("Decor", staticGroup);
+            // çiçekler: küçük renk öbekleri hâlinde, stilize vertex renkli tek malzeme.
+            // Oyun arazisinde her çiçek biçilebilir düğümdür (FlowerNode: makasla çim gibi kesilir).
+            var flowerGroup = s.Interactive ? Group("Flowers", nodes) : decor;
             for (int i = 0; i < s.FlowerCount; i++)
                 if (placer.TryPlaceSmall(0.35f, h - 0.6f, out var p))
                 {
-                    var flower = rng.Next(3) switch { 0 => k.FlowerPink, 1 => k.FlowerYellow, _ => k.FlowerWhite };
-                    Decor(decor, k.Flowers[rng.Next(k.Flowers.Length)], new[] { k.Bush, flower }, p, Range(0.9f, 1.4f));
+                    int color = rng.Next(StylizedFoliage.PetalColors.Length);
+                    BuildFlower(flowerGroup, p, color, rng.Next(2), Range(0.9f, 1.3f), nextId++, s.Interactive);
+                    int extra = rng.Next(3);
+                    for (int j = 0; j < extra; j++)
+                    {
+                        var q = p + new Vector3(Range(-0.6f, 0.6f), 0f, Range(-0.6f, 0.6f));
+                        if (placer.TryReserve(q, 0.25f))
+                            BuildFlower(flowerGroup, q, color, rng.Next(2), Range(0.75f, 1.1f), nextId++, s.Interactive);
+                    }
                 }
 
             var outerDecor = Group("OuterDecor", staticGroup);
@@ -224,13 +258,20 @@ namespace LandFlipper.EditorTools
             pivot.transform.SetParent(tree.transform, false);
 
             var trunk = MeshObject("Trunk", pivot.transform, kit.Trunks[rng.Next(kit.Trunks.Length)], kit.Bark);
-            trunk.transform.localScale = new Vector3(trunkRadius, height, trunkRadius);
 
             Mesh canopyMesh = pine ? kit.PineCanopies[rng.Next(kit.PineCanopies.Length)] : kit.RoundCanopies[rng.Next(kit.RoundCanopies.Length)];
             Material leaves = pine ? kit.Pine : (rng.NextDouble() < 0.5 ? kit.Leaves : kit.LeavesLight);
+            float crownY = pine ? height * 0.45f : height + canopy * 0.45f;
+            Vector3 crownScale = pine ? new Vector3(canopy, canopy * 1.25f, canopy) : Vector3.one * canopy;
+
+            // Çamda gövde tacın içinde bitmeli: koni tepeye doğru daralır, uzun gövde ucundan dışarı çıkıyordu.
+            // Görsel gövde taç yüksekliğinin ortasında kesilir; collider ve devrilme boyu (height) aynı kalır.
+            float trunkVisual = pine ? Mathf.Min(height, crownY + canopyMesh.bounds.max.y * crownScale.y * 0.45f) : height;
+            trunk.transform.localScale = new Vector3(trunkRadius, trunkVisual, trunkRadius);
+
             var crown = MeshObject("Canopy", pivot.transform, canopyMesh, leaves);
-            crown.transform.localPosition = new Vector3(0f, pine ? height * 0.45f : height + canopy * 0.45f, 0f);
-            crown.transform.localScale = pine ? new Vector3(canopy, canopy * 1.25f, canopy) : Vector3.one * canopy;
+            crown.transform.localPosition = new Vector3(0f, crownY, 0f);
+            crown.transform.localScale = crownScale;
             crown.transform.localRotation = Quaternion.Euler(0f, Range(0f, 360f), 0f);
 
             var trunkCollider = pivot.AddComponent<CapsuleCollider>();
@@ -250,6 +291,29 @@ namespace LandFlipper.EditorTools
 
             int hits = 3 + Mathf.RoundToInt((height - 2.3f) * 1.1f);
             tree.AddComponent<TreeNode>().EditorSetup(id, hits, pivot.transform, stump, trunkCollider, height, canopy);
+        }
+
+        /// <summary>Çiçek kümesi. Etkileşimliyse biçilebilir FlowerNode (çim gibi; balya sayacına katkı verir).</summary>
+        static void BuildFlower(Transform parent, Vector3 p, int color, int variant, float scale, int id, bool interactive)
+        {
+            var mesh = StylizedFoliage.FlowerOf(kit, color, variant);
+            if (!interactive)
+            {
+                Decor(parent, mesh, new[] { kit.Flower }, p, scale);
+                return;
+            }
+            var flower = new GameObject($"Flower_{id}");
+            flower.transform.SetParent(parent, false);
+            flower.transform.localPosition = Ground(p) + Vector3.down * 0.02f;
+            flower.transform.localRotation = Quaternion.Euler(0f, Range(0f, 360f), 0f);
+            var visual = MeshObject("Visual", flower.transform, mesh, kit.Flower);
+            visual.transform.localScale = Vector3.one * scale;
+            visual.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            var trigger = flower.AddComponent<BoxCollider>();
+            trigger.isTrigger = true;
+            trigger.size = new Vector3(0.6f * scale, 0.5f, 0.6f * scale);
+            trigger.center = new Vector3(0f, 0.25f, 0f);
+            flower.AddComponent<FlowerNode>().EditorSetup(id, visual.transform, trigger, StylizedFoliage.PetalColors[color]);
         }
 
         static void BuildDecorTree(Transform parent, Vector3 p, float scale)
@@ -462,31 +526,69 @@ namespace LandFlipper.EditorTools
             var plankB = Part("PlankB", new Vector3(2.5f, 0.16f, 0.3f), new Vector3(0f, -15f, 8f));
             Board(plankB, Vector3.zero, new Vector3(0.24f, 0.07f, 1.8f), Vector3.zero, kit.Wood);
 
-            // Çatı: kiremit dokulu kalın panel + altta koyu saçak tahtası (RoofR'de +X aşağıda, RoofL'de -X)
-            var roofR = Part("RoofR", new Vector3(1.2f, 2.35f, 0.4f), new Vector3(0f, 0f, -34f));
-            Board(roofR, Vector3.zero, new Vector3(2.0f, 0.1f, 3.0f), Vector3.zero, kit.Roof, true);
-            Board(roofR, new Vector3(0.98f, -0.04f, 0f), new Vector3(0.12f, 0.12f, 3.1f), Vector3.zero, kit.WoodDark);
-            var roofL = Part("RoofL", new Vector3(-1.05f, 2.55f, 0f), new Vector3(0f, 0f, 28f));
-            Board(roofL, Vector3.zero, new Vector3(2.4f, 0.1f, 4.0f), Vector3.zero, kit.Roof, true);
-            Board(roofL, new Vector3(-1.18f, -0.04f, 0f), new Vector3(0.12f, 0.12f, 4.1f), Vector3.zero, kit.WoodDark);
-            Board(roofL, new Vector3(1.18f, -0.05f, 0f), new Vector3(0.15f, 0.15f, 4.2f), Vector3.zero, kit.WoodDark); // mahya kirişi
+            // Beşik çatı: iki yarı mahyada buluşur, alt yüzleri yan duvarların üstüne oturur (30° eğim).
+            // Önceki sürümde yarılar kopuktu ve düz kesilmiş ön/arka duvarlar çatının içinden çıkıyordu.
+            const float Pitch = 0.5774f;   // tan(30°)
+            const float EaveY = 2.34f;     // |x| = 1.95'te (yan duvar hizası) çatının alt yüzü
+            float RoofBottom(float absX) => EaveY + (1.95f - absX) * Pitch;
+            const float HalfRun = 1.1f;    // mahyadan saçağa yatay mesafe 2.2 → yarı 1.1
+            float slope = 2.2f / Mathf.Cos(30f * Mathf.Deg2Rad);
 
-            // Duvarlar (sağ duvar yıkık: kısa ve bir tahtası eksik)
-            var wallRight = Part("WallRight", new Vector3(1.95f, 0.8f, 0.4f), new Vector3(0f, 0f, 5f));
-            Wall(wallRight, 2.5f, 1.4f, false, 1f, 5);
+            var roofR = Part("RoofR", new Vector3(HalfRun, RoofBottom(HalfRun), 0f), new Vector3(0f, 0f, -30f));
+            Board(roofR, new Vector3(-0.01f, 0.05f, 0f), new Vector3(slope + 0.02f, 0.1f, 4.0f), Vector3.zero, kit.Roof, true);
+            Board(roofR, new Vector3(slope * 0.5f - 0.05f, -0.03f, 0f), new Vector3(0.12f, 0.12f, 4.1f), Vector3.zero, kit.WoodDark); // saçak
+            var roofL = Part("RoofL", new Vector3(-HalfRun, RoofBottom(HalfRun), 0f), new Vector3(0f, 0f, 30f));
+            Board(roofL, new Vector3(0.01f, 0.05f, 0f), new Vector3(slope + 0.02f, 0.1f, 4.0f), Vector3.zero, kit.Roof, true);
+            Board(roofL, new Vector3(-slope * 0.5f + 0.05f, -0.03f, 0f), new Vector3(0.12f, 0.12f, 4.1f), Vector3.zero, kit.WoodDark);
+            {
+                // mahya kirişi: iki panelin birleşimini örter (dünyada yatay)
+                Vector2 d = new Vector2(HalfRun, RoofBottom(0f) + 0.14f - RoofBottom(HalfRun));
+                float c = Mathf.Cos(30f * Mathf.Deg2Rad), s = Mathf.Sin(30f * Mathf.Deg2Rad);
+                Board(roofL, new Vector3(d.x * c + d.y * s, -d.x * s + d.y * c, 0f), new Vector3(0.17f, 0.17f, 4.15f),
+                    new Vector3(0f, 0f, -30f), kit.WoodDark);
+            }
+
+            // Ön/arka duvar: dikey tahtalar, üstleri çatı eğiminin altında kalır (tepe üçgeni dahil)
+            void GableWall(Transform g, float x0, float x1, float yBottom, float z, float outward, int skip = -1, bool belts = true)
+            {
+                int n = Mathf.Max(1, Mathf.RoundToInt((x1 - x0) / 0.31f));
+                float w = (x1 - x0) / n;
+                for (int i = 0; i < n; i++)
+                {
+                    float xa = x0 + w * i, xb = xa + w;
+                    float outer = Mathf.Max(Mathf.Abs(xa), Mathf.Abs(xb));
+                    float top = RoofBottom(outer) - 0.03f - R(0f, 0.06f);
+                    if (i == skip) continue;
+                    float h = Mathf.Floor((top - yBottom) * 20f) / 20f;
+                    if (h < 0.1f) continue;
+                    var pos = new Vector3((xa + xb) * 0.5f, yBottom + h * 0.5f, z) - g.localPosition;
+                    Board(g, pos, new Vector3(w - 0.015f, h, 0.07f), new Vector3(0f, 0f, R(-1f, 1f)), (i % 4 == 2) ? kit.WoodDark : kit.Wood);
+                }
+                if (!belts) return;
+                foreach (float y in new[] { 0.56f, 1.7f })
+                    Board(g, new Vector3((x0 + x1) * 0.5f, y, z + 0.06f * outward) - g.localPosition,
+                        new Vector3(x1 - x0 + 0.04f, 0.12f, 0.05f), Vector3.zero, kit.WoodDark);
+            }
+
+            // Duvarlar: yan duvarlar düz (üstleri saçak altında), ön/arka duvarlar beşik. Eskilik: eksik tahtalar.
+            var wallRight = Part("WallRight", new Vector3(1.95f, 1.15f, 0f), Vector3.zero);
+            Wall(wallRight, 3.4f, 2.1f, false, 1f, 5);
             var wallFrontR = Part("WallFrontR", new Vector3(1.4f, 1.15f, -1.65f), Vector3.zero);
-            Wall(wallFrontR, 1.2f, 2.1f, true, -1f);
-            Board(wallFrontR, new Vector3(0.62f, 0.05f, -0.03f), new Vector3(0.14f, 2.3f, 0.14f), Vector3.zero, kit.WoodDark); // köşe dikmesi
+            GableWall(wallFrontR, 0.8f, 2.0f, 0.1f, -1.65f, -1f);
+            Board(wallFrontR, new Vector3(0.62f, 0f, -0.03f), new Vector3(0.14f, 2.22f, 0.14f), Vector3.zero, kit.WoodDark); // köşe dikmesi
+            Board(wallFrontR, new Vector3(-0.62f, 0f, -0.03f), new Vector3(0.12f, 2.22f, 0.12f), Vector3.zero, kit.WoodDark); // kapı kasası
             var wallFrontL = Part("WallFrontL", new Vector3(-1.25f, 1.15f, -1.65f), Vector3.zero);
-            Wall(wallFrontL, 1.5f, 2.1f, true, -1f);
-            Board(wallFrontL, new Vector3(-0.77f, 0.05f, -0.03f), new Vector3(0.14f, 2.3f, 0.14f), Vector3.zero, kit.WoodDark);
-            Board(wallFrontL, new Vector3(0.78f, 0.05f, -0.03f), new Vector3(0.12f, 2.3f, 0.12f), Vector3.zero, kit.WoodDark); // kapı kasası
+            GableWall(wallFrontL, -2.0f, -0.5f, 0.1f, -1.65f, -1f);
+            GableWall(wallFrontL, -0.5f, 0.8f, 2.2f, -1.65f, -1f, -1, false);   // kapı üstü tepe üçgeni
+            Board(wallFrontL, new Vector3(0.15f + 1.25f, 2.21f - 1.15f, -0.04f), new Vector3(1.42f, 0.12f, 0.1f), Vector3.zero, kit.WoodDark); // lento
+            Board(wallFrontL, new Vector3(-0.77f, 0f, -0.03f), new Vector3(0.14f, 2.22f, 0.14f), Vector3.zero, kit.WoodDark);
+            Board(wallFrontL, new Vector3(0.78f, 0f, -0.03f), new Vector3(0.12f, 2.22f, 0.12f), Vector3.zero, kit.WoodDark); // kapı kasası
             var wallLeft = Part("WallLeft", new Vector3(-1.95f, 1.15f, 0f), Vector3.zero);
             Wall(wallLeft, 3.4f, 2.1f, false, -1f);
             var wallBack = Part("WallBack", new Vector3(0f, 1.15f, 1.65f), Vector3.zero);
-            Wall(wallBack, 4f, 2.1f, true, 1f);
-            Board(wallBack, new Vector3(-1.98f, 0.05f, 0.03f), new Vector3(0.14f, 2.3f, 0.14f), Vector3.zero, kit.WoodDark);
-            Board(wallBack, new Vector3(1.98f, 0.05f, 0.03f), new Vector3(0.14f, 2.3f, 0.14f), Vector3.zero, kit.WoodDark);
+            GableWall(wallBack, -2.0f, 2.0f, 0.1f, 1.65f, 1f, 9);
+            Board(wallBack, new Vector3(-1.98f, 0f, 0.03f), new Vector3(0.14f, 2.22f, 0.14f), Vector3.zero, kit.WoodDark);
+            Board(wallBack, new Vector3(1.98f, 0f, 0.03f), new Vector3(0.14f, 2.22f, 0.14f), Vector3.zero, kit.WoodDark);
 
             // Zemin: X boyunca uzanan tahtalar
             var floor = Part("Floor", new Vector3(0f, 0.08f, 0f), Vector3.zero);
@@ -510,7 +612,13 @@ namespace LandFlipper.EditorTools
         static int boardVariant;
         static Material iron;
 
-        static Material Iron() => iron != null ? iron : (iron = Mat("M_Iron", 0.30f, 0.32f, 0.36f, 0.32f));
+        static Material Iron()
+        {
+            if (iron != null) return iron;
+            iron = Mat("M_Iron", 0.30f, 0.32f, 0.36f, 0.32f);
+            LightingSetup.TuneSurface(iron, 0.58f, 0.75f);   // örs/mengene: belirgin metal yansıması
+            return iron;
+        }
 
         /// <summary>Pahlı, dokulu ProBuilder tahtası. wobble: eğrilik/yamuk uç miktarı (0 = dümdüz).</summary>
         static GameObject SB(string n, Transform parent, Vector3 pos, Vector3 size, Vector3 euler, Material m,
@@ -628,15 +736,21 @@ namespace LandFlipper.EditorTools
             }
 
             // direkler + köşe payandaları
-            foreach (var x in new[] { -1.65f, 1.65f })
+            // Tente 14° eğimli: ön (z=-1.05) altı ~2.49, arka (z=1.35) altı ~3.09. Direkler ve kirişler
+            // kumaşın ALTINDA biter; böylece tentenin içinden geçmez, arka direk de havada kalmaz.
             foreach (var z in new[] { -1.05f, 1.35f })
             {
-                SB("Post", t, new Vector3(x, 1.35f, z), new Vector3(0.16f, 2.7f, 0.16f), Vector3.zero, kit.WoodDark, true, 0.3f);
-                float inward = -Mathf.Sign(x);
-                SB("Brace", t, new Vector3(x + inward * 0.2f, 2.42f, z), new Vector3(0.07f, 0.5f, 0.07f), new Vector3(0f, 0f, inward * -45f), kit.WoodDark, false, 0.2f);
+                bool front = z < 0f;
+                float top = front ? 2.47f : 3.07f;
+                float headerY = top - 0.06f;
+                foreach (var x in new[] { -1.65f, 1.65f })
+                {
+                    SB("Post", t, new Vector3(x, top * 0.5f, z), new Vector3(0.16f, top, 0.16f), Vector3.zero, kit.WoodDark, true, 0.3f);
+                    float inward = -Mathf.Sign(x);
+                    SB("Brace", t, new Vector3(x + inward * 0.2f, headerY - 0.2f, z), new Vector3(0.07f, 0.5f, 0.07f), new Vector3(0f, 0f, inward * -45f), kit.WoodDark, false, 0.2f);
+                }
+                SB("Header", t, new Vector3(0f, headerY, z), new Vector3(3.5f, 0.12f, 0.12f), Vector3.zero, kit.WoodDark, false, 0.3f);
             }
-            foreach (var z in new[] { -1.05f, 1.35f })
-                SB("Header", t, new Vector3(0f, 2.62f, z), new Vector3(3.5f, 0.12f, 0.12f), Vector3.zero, kit.WoodDark, false, 0.3f);
 
             // çizgili kanvas tente + yuvarlak saçak dilleri
             var awning = new GameObject("Awning").transform;
@@ -646,28 +760,29 @@ namespace LandFlipper.EditorTools
             {
                 const int stripes = 7;
                 float width = 3.9f / stripes;
-                var slab = StylizedKit.RoundSlab();
+                var flap = StylizedKit.AwningFlap(width - 0.012f, 0.08f, 0.13f, 0.03f);
                 for (int i = 0; i < stripes; i++)
                 {
                     var m = i % 2 == 0 ? kit.AwningRed : kit.AwningCream;
                     float x = -1.95f + width * (i + 0.5f);
-                    SB("Stripe", awning, new Vector3(x, 0f, 0f), new Vector3(width - 0.004f, 0.05f, 3.0f), Vector3.zero, m, false, 0.35f, 0.8f);
-                    SB("Flap", awning, new Vector3(x, -0.07f, -1.5f), new Vector3(width - 0.004f, 0.13f, 0.035f), Vector3.zero, m, false, 0f, 0.8f);
-                    var tongue = MeshObject("FlapRound", awning, slab, m, m);
-                    tongue.transform.localPosition = new Vector3(x, -0.135f, -1.5f - 0.0175f);
-                    tongue.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-                    tongue.transform.localScale = new Vector3(width * 0.5f - 0.004f, 0.035f, 0.12f); // basık yarım daire: üst yarısı saçak tahtasında gizli
+                    SB("Stripe", awning, new Vector3(x, 0f, 0f), new Vector3(width - 0.004f, 0.05f, 3.0f), Vector3.zero, m, false, 0f, 0.8f);
+                    // tek parça kıvrımlı saçak dili: üst kenarı şeridin ucuna gömülü, komşusuyla çakışmaz
+                    var tongue = MeshObject("Flap", awning, flap, m);
+                    tongue.transform.localPosition = new Vector3(x, 0.02f, -1.5f);
                 }
                 SB("Ridge", awning, new Vector3(0f, 0.05f, 1.45f), new Vector3(3.95f, 0.08f, 0.12f), Vector3.zero, kit.WoodDark, false, 0.3f);
             }
 
-            // tabela (satış olunca zıplar): askı çubuklarıyla tentenin üstünde
+            // tabela (satış olunca zıplar): tentenin yüksek arka kenarının HEMEN ARKASINDA yerden yükselen iki
+            // dikmeye çakılı. Önden bakınca tentenin üstünde görünür ama ne kumaşa basar ne içinden geçer.
+            // (Tentenin arka kenarı z ≈ 1.66, üst yüzü y ≈ 3.25.)
+            const float signZ = 1.72f, postZ = 1.84f, signY = 3.78f;
+            foreach (float x in new[] { -0.85f, 0.85f })
+                SB("SignPost", t, new Vector3(x, (signY + 0.3f) * 0.5f, postZ), new Vector3(0.12f, signY + 0.3f, 0.12f), Vector3.zero, kit.WoodDark, true, 0.3f);
             var sign = new GameObject("Sign");
             sign.transform.SetParent(t, false);
-            sign.transform.localPosition = new Vector3(0f, 3.45f, -1.2f);
+            sign.transform.localPosition = new Vector3(0f, signY, signZ);
             FramedBoard(sign.transform, new Vector2(2.2f, 0.6f), 0.08f, kit.Sign);
-            foreach (float x in new[] { -0.8f, 0.8f })
-                SB("Hanger", sign.transform, new Vector3(x, -0.42f, 0.04f), new Vector3(0.06f, 0.3f, 0.06f), Vector3.zero, kit.WoodDark, false, 0f);
             Label(sign.transform, "SATIŞ", new Vector3(0f, 0f, -0.055f), 0.055f, SignInk);
 
             // fiyat panosu: ayak + çerçeveli pano + küçük çatı
@@ -707,7 +822,7 @@ namespace LandFlipper.EditorTools
                 Barrel(t, new Vector3(x, 0f, -1.9f), 0.34f, 0.85f);
             foreach (var x in new[] { -1.4f, 1.4f })
             {
-                var flowers = MeshObject("Flowers", t, kit.Flowers[rng.Next(kit.Flowers.Length)], kit.Bush, x < 0 ? kit.FlowerYellow : kit.FlowerPink);
+                var flowers = MeshObject("Flowers", t, StylizedFoliage.FlowerOf(kit, x < 0 ? 1 : 0, rng.Next(2)), kit.Flower);
                 flowers.transform.localPosition = new Vector3(x, 0.15f, -1.35f);
                 flowers.transform.localScale = Vector3.one * 1.2f;
             }
@@ -875,10 +990,14 @@ namespace LandFlipper.EditorTools
             SB("FrontPostR", t, new Vector3(0.95f, 1.2f, -0.65f), new Vector3(0.14f, 2.4f, 0.14f), Vector3.zero, kit.WoodDark, true, 0.3f);
             SB("Header", t, new Vector3(-0.3f, 2.36f, -0.65f), new Vector3(2.7f, 0.12f, 0.12f), Vector3.zero, kit.WoodDark, false, 0.3f);
 
-            // tabela
+            // tabela: çatının yüksek arka kenarının arkasındaki iki dikmeye çakılı (eskiden ön saçağın
+            // içine gömülüyordu). Çatının arka kenarı z ≈ 1.52, üstü y ≈ 3.12.
+            const float signZ = 1.6f, postZ = 1.72f, signY = 3.5f;
+            foreach (float x in new[] { -1.0f, 0.4f })
+                SB("SignPost", t, new Vector3(x, (signY + 0.25f) * 0.5f, postZ), new Vector3(0.12f, signY + 0.25f, 0.12f), Vector3.zero, kit.WoodDark, true, 0.3f);
             var sign = new GameObject("Sign");
             sign.transform.SetParent(t, false);
-            sign.transform.localPosition = new Vector3(-0.3f, 2.66f, -0.95f);
+            sign.transform.localPosition = new Vector3(-0.3f, signY, signZ);
             FramedBoard(sign.transform, new Vector2(1.9f, 0.5f), 0.08f, kit.Sign);
             Label(sign.transform, "ALETLER", new Vector3(0f, 0f, -0.055f), 0.026f, SignInk);
 
@@ -1170,6 +1289,23 @@ namespace LandFlipper.EditorTools
                 }
                 point = default;
                 return false;
+            }
+
+            /// <summary>Nokta boşsa yer ayırır.</summary>
+            public bool TryReserve(Vector3 point, float radius)
+            {
+                if (!IsFree(point, radius)) return false;
+                occupied.Add((new Vector2(point.x, point.z), radius, radius));
+                return true;
+            }
+
+            /// <summary>Nokta, kayıtlı nesnelerin çekirdek yarıçapı dışında mı? (Yer ayırmaz.)</summary>
+            public bool IsFree(Vector3 point, float radius)
+            {
+                var p2 = new Vector2(point.x, point.z);
+                foreach (var o in occupied)
+                    if (Vector2.Distance(p2, o.p) < radius + o.core) return false;
+                return true;
             }
 
             public bool TryPlaceSmall(float radius, float extent, out Vector3 point)

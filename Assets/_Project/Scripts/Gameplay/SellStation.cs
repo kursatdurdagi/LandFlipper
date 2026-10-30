@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using LandFlipper.Gameplay.Effects;
 using UnityEngine;
 
 namespace LandFlipper.Gameplay
@@ -50,7 +51,9 @@ namespace LandFlipper.Gameplay
 
         void OnMoneyChanged(int oldValue, int newValue)
         {
-            if (newValue <= oldValue || bounceTarget == null) return;
+            if (newValue <= oldValue) return;
+            StylizedFx.Sold(IntakePosition + Vector3.up * 0.25f);
+            if (bounceTarget == null) return;
             if (bounceRoutine != null) StopCoroutine(bounceRoutine);
             bounceRoutine = StartCoroutine(Bounce());
         }
