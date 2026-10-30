@@ -29,6 +29,21 @@ namespace LandFlipper.Player.Animation
         bool initialized;
         bool visible;
 
+        /// <summary>Alet kullanılırken (yük yokken de) kol görünsün; poz PlayerTools tarafından verilir.</summary>
+        public bool ToolMode { get; set; }
+
+        /// <summary>Kol kemikleri (alet IK'sı için).</summary>
+        public bool TryGetArm(out Transform upper, out Transform middle, out Transform end, out Quaternion endBindLocal)
+        {
+            upper = upperArm;
+            middle = forearm;
+            end = hand;
+            endBindLocal = handBindLocal;
+            return initialized;
+        }
+
+        public bool IsShown => visible;
+
         void Awake()
         {
             renderers = GetComponentsInChildren<Renderer>(true);
@@ -83,13 +98,15 @@ namespace LandFlipper.Player.Animation
         {
             bool show = initialized
                         && owner != null && owner.isLocalPlayer && !owner.IsThirdPerson
-                        && carry != null && carry.IsCarrying
+                        && carry != null && (carry.IsCarrying || ToolMode)
                         && gripAnchor != null;
             SetVisible(show);
             if (!show) return;
 
             for (int i = 0; i < rigBones.Length; i++)
                 rigBones[i].localRotation = bindRotations[i];
+
+            if (!carry.IsCarrying) return; // alet pozu: PlayerTools (daha sonra çalışır) kolu aletin sapına uzatır
 
             Vector3 up = gripAnchor.up;
             Vector3 right = gripAnchor.right;

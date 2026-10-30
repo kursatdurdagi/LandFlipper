@@ -84,6 +84,7 @@ namespace LandFlipper.UI
         void OnToggle(InputAction.CallbackContext _)
         {
             if (SettingsController.IsOpen || SettingsController.IsRebinding) return; // tuş atanırken açılmasın
+            if (WorkbenchController.IsAnyOpen) return;
             if (!IsOpen && InputGate.IsBlocked) return; // oyun menüsü açıkken açılmasın
             if (!IsOpen && CareerState.Instance == null) return;
             SetOpen(!IsOpen);

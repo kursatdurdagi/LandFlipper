@@ -22,6 +22,8 @@ namespace LandFlipper.Gameplay
         public static event Action<int> LeveledUp;
         /// <summary>(yetenek adı, yeni seviye) — herkese.</summary>
         public static event Action<string, int> SkillUpgraded;
+        /// <summary>(alet türü, yeni alet) — herkese.</summary>
+        public static event Action<ToolKind, ToolDefinition> ToolUpgraded;
 
         [SerializeField] SkillDefinition[] skills = Array.Empty<SkillDefinition>();
         [Tooltip("Seviye 1→2 için gereken XP.")]
@@ -29,6 +31,8 @@ namespace LandFlipper.Gameplay
         [Tooltip("Her seviyede gereken XP'ye eklenen miktar.")]
         [SerializeField] int xpGrowthPerLevel = 30;
         [SerializeField] int skillPointsPerLevel = 1;
+        [Tooltip("Tüm alet kademeleri (her tür için tier 0, 1, 2...).")]
+        [SerializeField] ToolDefinition[] tools = Array.Empty<ToolDefinition>();
 
         [SyncVar(hook = nameof(OnMoneyChanged))] int money;
         [SyncVar] int level = 1;
@@ -36,6 +40,8 @@ namespace LandFlipper.Gameplay
         [SyncVar] int skillPoints;
 
         readonly SyncDictionary<string, int> skillLevels = new SyncDictionary<string, int>();
+        /// <summary>(int)ToolKind → sahip olunan en iyi kademe. Kayıt yoksa 0 (başlangıç aleti).</summary>
+        readonly SyncDictionary<int, int> toolTiers = new SyncDictionary<int, int>();
 
         public int Money => money;
         public int Level => level;
@@ -43,6 +49,7 @@ namespace LandFlipper.Gameplay
         public int XpToNextLevel => baseXpToLevel + (level - 1) * xpGrowthPerLevel;
         public int SkillPoints => skillPoints;
         public IReadOnlyList<SkillDefinition> Skills => skills;
+        public IReadOnlyList<ToolDefinition> Tools => tools;
 
         void Awake() => Instance = this;
 
@@ -94,6 +101,56 @@ namespace LandFlipper.Gameplay
                 if (skill != null && skill.id == id) return skill;
             return null;
         }
+
+        // ------------------------------------------------------------ aletler
+
+        public int GetToolTier(ToolKind kind) => toolTiers.TryGetValue((int)kind, out int t) ? t : 0;
+
+        public ToolDefinition GetTool(ToolKind kind, int tier)
+        {
+            foreach (var tool in tools)
+                if (tool != null && tool.kind == kind && tool.tier == tier) return tool;
+            return null;
+        }
+
+        public ToolDefinition CurrentTool(ToolKind kind) => GetTool(kind, GetToolTier(kind));
+        public ToolDefinition NextTool(ToolKind kind) => GetTool(kind, GetToolTier(kind) + 1);
+
+        public int MaxToolTier(ToolKind kind)
+        {
+            int max = 0;
+            foreach (var tool in tools)
+                if (tool != null && tool.kind == kind) max = Mathf.Max(max, tool.tier);
+            return max;
+        }
+
+        /// <summary>Elde kullanılan alet (kariyer yoksa null).</summary>
+        public static ToolDefinition Tool(ToolKind kind) => Instance != null ? Instance.CurrentTool(kind) : null;
+
+        public bool CanUpgradeTool(ToolKind kind, out string reason)
+        {
+            var next = NextTool(kind);
+            if (next == null) { reason = "En iyi alete sahipsin"; return false; }
+            if (level < next.requiredLevel) { reason = $"Seviye {next.requiredLevel} gerekli"; return false; }
+            if (money < next.price) { reason = $"Yetersiz bütçe ({next.price} TL gerekli)"; return false; }
+            reason = null;
+            return true;
+        }
+
+        [Server]
+        public bool ServerTryUpgradeTool(ToolKind kind, out string message)
+        {
+            if (!CanUpgradeTool(kind, out message)) return false;
+            var next = NextTool(kind);
+            money -= next.price;
+            toolTiers[(int)kind] = next.tier;
+            RpcToolUpgraded((int)kind, next.tier);
+            message = null;
+            return true;
+        }
+
+        [ClientRpc]
+        void RpcToolUpgraded(int kind, int tier) => ToolUpgraded?.Invoke((ToolKind)kind, GetTool((ToolKind)kind, tier));
 
         // ------------------------------------------------------------ server
 
@@ -149,6 +206,7 @@ namespace LandFlipper.Gameplay
 
 #if UNITY_EDITOR
         public void EditorSetSkills(SkillDefinition[] definitions) => skills = definitions;
+        public void EditorSetTools(ToolDefinition[] definitions) => tools = definitions;
 #endif
     }
 }

@@ -1,39 +1,33 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
     <Style src="../Styles/Common.uss" />
     <Style src="SkillTree.uss" />
-    <ui:VisualElement name="skill-overlay" class="screen skill-overlay hidden">
-        <ui:VisualElement name="skill-panel" class="skill-panel">
+    <ui:VisualElement name="skill-overlay" class="screen scrim skill-overlay hidden">
+        <ui:VisualElement name="skill-panel" class="sheet skill-panel">
+            <ui:VisualElement class="sticker"><ui:Label text="Yetenekler" /></ui:VisualElement>
 
             <ui:VisualElement class="skill-header">
-                <ui:VisualElement class="skill-title-group">
-                    <ui:Label text="YETENEK AĞACI" class="skill-title" />
-                    <ui:Label text="Host kariyeri · açılan yetenekler tüm ekip için geçerli" class="skill-subtitle" />
-                </ui:VisualElement>
-
                 <ui:VisualElement class="skill-level-group">
                     <ui:VisualElement class="skill-level-badge">
-                        <ui:Label text="SV" class="skill-level-caption" />
                         <ui:Label name="level-label" text="1" class="skill-level-value" />
                     </ui:VisualElement>
-                    <ui:VisualElement class="skill-xp-group">
-                        <ui:Label name="xp-label" text="0 / 40 XP" class="skill-xp-label" />
-                        <ui:VisualElement class="xp-track">
-                            <ui:VisualElement name="xp-fill" class="xp-fill" />
-                        </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="skill-xp-group">
+                    <ui:Label name="xp-label" text="0 / 40 XP" class="skill-xp-label" />
+                    <ui:VisualElement class="xp-track">
+                        <ui:VisualElement name="xp-fill" class="xp-fill" />
                     </ui:VisualElement>
                 </ui:VisualElement>
-
                 <ui:VisualElement name="points-chip" class="skill-points">
                     <ui:Label name="points-label" text="0" class="skill-points-value" />
-                    <ui:Label text="YETENEK&#10;PUANI" class="skill-points-caption" />
+                    <ui:Label text="puan" class="skill-points-caption" />
                 </ui:VisualElement>
             </ui:VisualElement>
 
             <ui:VisualElement name="branches" class="skill-branches" />
 
             <ui:VisualElement class="skill-footer">
-                <ui:Label text="Kaynak topladıkça XP kazanırsın · her seviyede +1 yetenek puanı" class="skill-footer-text" />
-                <ui:Label text="[TAB] / [Esc] Kapat" class="skill-footer-key" />
+                <ui:Label text="Topladıkça XP kazan, her seviyede +1 puan." class="skill-footer-text" />
+                <ui:Label text="Tab" class="skill-footer-key" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

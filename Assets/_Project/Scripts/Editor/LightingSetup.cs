@@ -15,6 +15,8 @@ namespace LandFlipper.EditorTools
         const string SettingsFolder = "Assets/_Project/Settings";
         const string ProfilePath = SettingsFolder + "/LF_StylizedVolume.asset";
         const string SkyboxPath = "Assets/_Project/Art/Materials/Sky/M_Skybox_Stylized.mat";
+        const string SkyShaderName = "LandFlipper/StylizedSky";
+        const string SunFlarePath = SettingsFolder + "/LF_SunFlare.asset";
 
         // Ortak renk paleti
         static readonly Color SunColor = new Color(1f, 0.88f, 0.72f);
@@ -29,6 +31,7 @@ namespace LandFlipper.EditorTools
             ConfigurePipeline();
             var profile = CreateProfile();
             var sky = CreateSkybox();
+            CreateSunFlare();
             var sun = Object.FindFirstObjectByType<Light>();
             ApplySceneLighting(sun, sky);
             AddGlobalVolume(profile);
@@ -45,11 +48,13 @@ namespace LandFlipper.EditorTools
             urp.shadowDistance = 90f;
             urp.shadowCascadeCount = 4;
             urp.supportsHDR = true;
+            urp.supportsCameraDepthTexture = true; // güneş parlamasının ağaç/arazi arkasında kalması (occlusion)
 
             var so = new SerializedObject(urp);
             SetFloat(so, "m_MainLightShadowmapResolution", 4096);
             SetBool(so, "m_SoftShadowsSupported", true);
             SetFloat(so, "m_SoftShadowQuality", 2); // orta
+            SetBool(so, "m_SupportDataDrivenLensFlare", true);
             so.ApplyModifiedPropertiesWithoutUndo();
 
             // SSAO: low poly yüzeylerin birleşim yerlerinde yumuşak derinlik
@@ -129,19 +134,48 @@ namespace LandFlipper.EditorTools
         public static Material CreateSkybox()
         {
             LowPolyWorldBuilder.EnsureFolder("Assets/_Project/Art/Materials/Sky");
+            var shader = Shader.Find(SkyShaderName);
             var sky = AssetDatabase.LoadAssetAtPath<Material>(SkyboxPath);
             if (sky == null)
             {
-                sky = new Material(Shader.Find("Skybox/Procedural"));
+                sky = new Material(shader != null ? shader : Shader.Find("Skybox/Procedural"));
                 AssetDatabase.CreateAsset(sky, SkyboxPath);
             }
-            sky.SetFloat("_SunDisk", 2f);            // yüksek kaliteli güneş diski
-            sky.SetFloat("_SunSize", 0.035f);
-            sky.SetFloat("_SunSizeConvergence", 6f);
-            sky.SetFloat("_AtmosphereThickness", 0.75f);
-            sky.SetColor("_SkyTint", SkyTint);
-            sky.SetColor("_GroundColor", new Color(0.46f, 0.52f, 0.38f));
-            sky.SetFloat("_Exposure", 1.15f);
+
+            if (shader == null)
+            {
+                Debug.LogWarning($"[LandFlipper] {SkyShaderName} bulunamadı, Skybox/Procedural kullanılıyor.");
+                sky.shader = Shader.Find("Skybox/Procedural");
+                sky.SetColor("_SkyTint", SkyTint);
+                sky.SetFloat("_Exposure", 1.15f);
+                EditorUtility.SetDirty(sky);
+                return sky;
+            }
+
+            // Stilize gök: canlı mavi tepe, sisle aynı renkte ufuk, sıcak güneş, kabarık bulutlar
+            sky.shader = shader;
+            sky.SetColor("_ZenithColor", new Color(0.27f, 0.50f, 0.86f));
+            sky.SetColor("_SkyColor", new Color(0.50f, 0.72f, 0.96f));
+            sky.SetColor("_HorizonColor", HorizonFog);
+            sky.SetColor("_GroundColor", new Color(0.62f, 0.70f, 0.62f));
+            sky.SetFloat("_HorizonHeight", 0.22f);
+            sky.SetFloat("_ZenithHeight", 0.75f);
+            sky.SetColor("_SunColor", new Color(4.2f, 3.9f, 3.3f));
+            sky.SetFloat("_SunSize", 0.045f);
+            sky.SetFloat("_SunEdge", 0.006f);
+            sky.SetColor("_SunGlowColor", new Color(1f, 0.84f, 0.6f));
+            sky.SetFloat("_SunGlow", 0.6f);
+            sky.SetFloat("_SunGlowFalloff", 18f);
+            sky.SetFloat("_SunHaze", 0.35f);
+            sky.SetColor("_CloudColor", Color.white);
+            sky.SetColor("_CloudShadowColor", new Color(0.72f, 0.79f, 0.90f));
+            sky.SetColor("_CloudRimColor", new Color(1f, 0.88f, 0.68f));
+            sky.SetFloat("_CloudCoverage", 0.52f);
+            sky.SetFloat("_CloudSoftness", 0.035f);
+            sky.SetFloat("_CloudScale", 1.5f);
+            sky.SetFloat("_CloudSpeed", 0.0045f);
+            sky.SetFloat("_CloudOpacity", 0.95f);
+            sky.SetFloat("_CloudHeightFade", 0.12f);
             EditorUtility.SetDirty(sky);
             return sky;
         }
@@ -162,6 +196,7 @@ namespace LandFlipper.EditorTools
                 // alçak, sıcak öğleden sonra açısı: uzun yumuşak gölgeler
                 sun.transform.rotation = Quaternion.Euler(36f, -42f, 0f);
                 RenderSettings.sun = sun;
+                AddSunFlare(sun);
             }
 
             if (skybox != null) RenderSettings.skybox = skybox;
@@ -180,6 +215,111 @@ namespace LandFlipper.EditorTools
 
             RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
             RenderSettings.reflectionIntensity = 0.6f;
+        }
+
+        // ------------------------------------------------------------ güneş parlaması
+
+        /// <summary>
+        /// Güneşe bakınca hafif lens parlaması: güneşin etrafında sıcak bir hale, ince yatay ışık çizgisi
+        /// ve ekran ortasına doğru birkaç soluk altıgen "hayalet". Ağaç/arazi arkasında kalınca söner.
+        /// </summary>
+        public static LensFlareDataSRP CreateSunFlare()
+        {
+            LowPolyWorldBuilder.EnsureFolder(SettingsFolder);
+            var data = AssetDatabase.LoadAssetAtPath<LensFlareDataSRP>(SunFlarePath);
+            if (data == null)
+            {
+                data = ScriptableObject.CreateInstance<LensFlareDataSRP>();
+                AssetDatabase.CreateAsset(data, SunFlarePath);
+            }
+
+            var elements = new System.Collections.Generic.List<LensFlareDataElementSRP>
+            {
+                // güneşin etrafındaki yumuşak sıcak hale
+                FlareCircle(0f, 0.32f, 5.5f, new Color(1f, 0.86f, 0.62f), 0.12f, 1f),
+                // ince yatay ışık çizgisi
+                FlareCircle(0f, 0.12f, 1f, new Color(1f, 0.92f, 0.8f), 0.6f, 1f, new Vector2(14f, 0.18f)),
+                // güneş çevresinde çok soluk halka
+                FlareRing(0f, 0.05f, 7f, new Color(1f, 0.9f, 0.75f)),
+                // ekran ortasına doğru soluk hayaletler
+                FlareGhost(0.55f, 0.07f, 0.55f, new Color(1f, 0.85f, 0.55f)),
+                FlareGhost(0.85f, 0.05f, 0.35f, new Color(0.65f, 1f, 0.75f)),
+                FlareGhost(1.25f, 0.06f, 0.8f, new Color(0.6f, 0.8f, 1f)),
+                FlareGhost(1.6f, 0.04f, 1.25f, new Color(1f, 0.75f, 0.6f)),
+                FlareCircle(1.95f, 0.05f, 0.3f, new Color(0.8f, 0.9f, 1f), 0.5f, 0.6f),
+            };
+            data.elements = elements.ToArray();
+            EditorUtility.SetDirty(data);
+            return data;
+        }
+
+        static LensFlareDataElementSRP FlareBase(float position, float intensity, float scale, Color tint)
+        {
+            var e = new LensFlareDataElementSRP();
+            e.visible = true;
+            e.position = position;
+            e.localIntensity = intensity;
+            e.uniformScale = scale;
+            e.sizeXY = Vector2.one;
+            e.tint = tint;
+            e.modulateByLightColor = true;
+            e.blendMode = SRPLensFlareBlendMode.Additive;
+            e.allowMultipleElement = false;
+            e.count = 1;
+            e.preserveAspectRatio = false;
+            e.autoRotate = false;
+            return e;
+        }
+
+        static LensFlareDataElementSRP FlareCircle(float position, float intensity, float scale, Color tint, float fallOff, float gradient,
+            Vector2? size = null)
+        {
+            var e = FlareBase(position, intensity, scale, tint);
+            e.flareType = SRPLensFlareType.Circle;
+            e.fallOff = fallOff;
+            e.edgeOffset = gradient;
+            if (size.HasValue) e.sizeXY = size.Value;
+            return e;
+        }
+
+        static LensFlareDataElementSRP FlareRing(float position, float intensity, float scale, Color tint)
+        {
+            var e = FlareBase(position, intensity, scale, tint);
+            e.flareType = SRPLensFlareType.Ring;
+            e.ringThickness = 0.12f;
+            e.fallOff = 0.5f;
+            e.edgeOffset = 0.4f;
+            return e;
+        }
+
+        static LensFlareDataElementSRP FlareGhost(float position, float intensity, float scale, Color tint)
+        {
+            var e = FlareBase(position, intensity, scale, tint);
+            e.flareType = SRPLensFlareType.Polygon;
+            e.sideCount = 6;
+            e.sdfRoundness = 0.35f;
+            e.fallOff = 0.85f;
+            e.edgeOffset = 0.25f;
+            return e;
+        }
+
+        static void AddSunFlare(Light sun)
+        {
+            var data = AssetDatabase.LoadAssetAtPath<LensFlareDataSRP>(SunFlarePath);
+            if (data == null) data = CreateSunFlare();
+
+            var flare = sun.GetComponent<LensFlareComponentSRP>();
+            if (flare == null) flare = sun.gameObject.AddComponent<LensFlareComponentSRP>();
+            flare.lensFlareData = data;
+            flare.intensity = 1f;
+            flare.scale = 1f;
+            flare.attenuationByLightShape = false; // yönlü ışık
+            flare.useOcclusion = true;              // ağaç/tepe arkasında kalınca söner
+            flare.occlusionRadius = 0.6f;
+            flare.sampleCount = 24;
+            flare.occlusionOffset = 0.05f;
+            flare.allowOffScreen = false;
+            EditorUtility.SetDirty(flare);
         }
 
         public static void AddGlobalVolume(VolumeProfile profile)

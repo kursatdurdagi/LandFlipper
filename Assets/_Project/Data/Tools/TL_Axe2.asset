@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf82630f8a010af4e96776f707abe041, type: 3}
+  m_Name: TL_Axe2
+  m_EditorClassIdentifier: Assembly-CSharp::LandFlipper.Gameplay.ToolDefinition
+  id: axe_steel
+  kind: 1
+  tier: 2
+  displayName: "\xC7elik Balta"
+  description: "Keskin \xE7elik a\u011F\u0131z, a\u011Fa\xE7lar\u0131 birka\xE7 darbede
+    devirir."
+  iconText: B
+  price: 520
+  requiredLevel: 5
+  power: 3
+  visualPrefab: {fileID: 7332387982510835262, guid: c13326c694f73a949a9cddc730ba6187, type: 3}
+  gripPositionOffset: {x: 0, y: 0, z: 0}
+  gripEulerOffset: {x: 0, y: 0, z: 0}

@@ -1,0 +1,118 @@
+/* Land Flipper — Ana menü: panel yok; çizgi film logosu ve tombul butonlar sahnenin üstünde */
+
+.main-menu {
+    align-items: flex-start;
+    justify-content: center;
+    padding-left: 110px;
+}
+
+.mm-column {
+    width: 420px;
+}
+
+/* ---- logo: kalın konturlu, sert gölgeli, hafif eğik (kontrolcü hafifçe sallar) */
+.mm-logo {
+    margin-bottom: 40px;
+    rotate: -4deg;
+    transform-origin: left center;
+}
+
+.mm-logo-line {
+    font-size: 104px;
+    -unity-font-style: bold;
+    color: var(--cream);
+    -unity-text-outline-width: 6px;
+    -unity-text-outline-color: var(--ink);
+    text-shadow: 0 9px 0 rgba(59, 42, 31, 1);
+    margin: -20px 0 -20px 0;
+    letter-spacing: -1px;
+}
+
+.mm-logo-accent {
+    color: var(--sun);
+    margin-left: 46px;
+}
+
+/* ---- butonlar */
+.mm-buttons {
+    align-items: flex-start;
+}
+
+.mm-play {
+    width: 320px;
+    height: 80px;
+    font-size: 34px;
+    border-width: 3px;
+    border-bottom-width: 8px;
+    border-radius: 20px;
+    margin-bottom: 18px;
+}
+
+.mm-play:active {
+    border-bottom-width: 3px;
+}
+
+.mm-btn {
+    width: 250px;
+    height: 58px;
+    font-size: 21px;
+    -unity-text-align: middle-left;
+    padding-left: 22px;
+}
+
+.mm-btn:hover {
+    translate: 8px -2px;
+    rotate: -1.5deg;
+}
+
+.mm-play:hover {
+    translate: 0 -3px;
+    rotate: -1deg;
+}
+
+.mm-quit {
+    width: 190px;
+    background-color: var(--cream-2);
+    color: var(--ink-soft);
+}
+
+/* ---- giriş animasyonu (kontrolcü sırayla kaldırır) */
+.mm-anim {
+    transition-property: translate, opacity, rotate, background-color, border-bottom-width;
+    transition-duration: 0.45s, 0.35s, 0.12s, 0.12s, 0.12s;
+    transition-timing-function: ease-out-back, ease-out, ease-out-back, ease-out, ease-out;
+}
+
+.mm-enter {
+    translate: -80px 0;
+    opacity: 0;
+}
+
+/* ---- co-op / bağlantı kartları */
+.mm-card {
+    width: 360px;
+    padding: 44px 28px 22px 28px;
+    margin-top: 12px;
+}
+
+.mm-split {
+    flex-direction: row;
+    align-items: center;
+    margin: 8px 0 14px 0;
+}
+
+.mm-split-rule {
+    flex-grow: 1;
+}
+
+.mm-split-text {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: var(--muted);
+    margin: 0 10px;
+}
+
+.mm-busy {
+    -unity-text-align: middle-center;
+    margin-top: 8px;
+}

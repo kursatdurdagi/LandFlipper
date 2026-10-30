@@ -1,7 +1,9 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using LandFlipper.Core;
 using LandFlipper.Gameplay;
 using LandFlipper.Player;
+using LandFlipper.Player.Tools;
 using Mirror;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -75,6 +77,8 @@ namespace LandFlipper.UI
             CareerState.LeveledUp += OnLeveledUp;
             CareerState.SkillUpgraded += OnSkillUpgraded;
             PlayerSkills.LocalNotification += ShowToast;
+            PlayerTools.LocalNotification += ShowToast;
+            CareerState.ToolUpgraded += OnToolUpgraded;
         }
 
         Label hintLabel;
@@ -84,11 +88,12 @@ namespace LandFlipper.UI
         void RefreshHint()
         {
             string text =
-                $"{LFInput.KeyLabel(LFInput.Primary)}: Kes/Kır · Basılı tut: Biç · " +
-                $"{LFInput.KeyLabel(LFInput.Interact)}: Al/Sat (basılı: hepsini sat) · " +
-                $"{LFInput.KeyLabel(LFInput.Drop)}: At (basılı: hepsi) · " +
-                $"{LFInput.KeyLabel(LFInput.SkillTree)}: Yetenekler · " +
-                $"{LFInput.KeyLabel(LFInput.ToggleView)}: Görünüm · Esc: Menü";
+                HintKey(LFInput.KeyLabel(LFInput.Primary)) + "Kes     " +
+                HintKey(LFInput.KeyLabel(LFInput.Interact)) + "Al / sat     " +
+                HintKey(LFInput.KeyLabel(LFInput.Drop)) + "Bırak     " +
+                HintKey(LFInput.KeyLabel(LFInput.SkillTree)) + "Yetenekler     " +
+                HintKey(LFInput.KeyLabel(LFInput.ToggleView)) + "Görünüm     " +
+                HintKey("Esc") + "Menü";
             if (text == lastHint) return;
             lastHint = text;
             hintLabel.text = text;
@@ -101,6 +106,8 @@ namespace LandFlipper.UI
             CareerState.LeveledUp -= OnLeveledUp;
             CareerState.SkillUpgraded -= OnSkillUpgraded;
             PlayerSkills.LocalNotification -= ShowToast;
+            PlayerTools.LocalNotification -= ShowToast;
+            CareerState.ToolUpgraded -= OnToolUpgraded;
             if (interactor != null) interactor.Notification -= ShowToast;
             interactor = null;
             carry = null;
@@ -142,12 +149,23 @@ namespace LandFlipper.UI
             if (interactor != null) interactor.Notification += ShowToast;
         }
 
+        // Tuş adları ipucunda vurgulanır: "[E] Al" → "E  Al"
+        const string KeyColor = "#4E8530";
+        static readonly Regex KeyPattern = new Regex(@"\[([^\]]+)\]\s*");
+
+        static string Key(string key) => $"<b><color={KeyColor}>{key}</color></b>  ";
+        // alt tuş satırı koyu konturlu açık metin; tuşlar orada güneş sarısı
+        static string HintKey(string key) => $"<color=#F5C24A>{key}</color>  ";
+
+        static string FormatPrompt(string prompt) =>
+            string.IsNullOrEmpty(prompt) ? prompt : KeyPattern.Replace(prompt, m => Key(m.Groups[1].Value));
+
         void UpdatePrompt()
         {
             string prompt = interactor != null ? interactor.Prompt : string.Empty;
             if (prompt == lastPrompt) return;
             lastPrompt = prompt;
-            promptLabel.text = prompt;
+            promptLabel.text = FormatPrompt(prompt);
             SetVisible(promptLabel, !string.IsNullOrEmpty(prompt));
         }
 
@@ -217,7 +235,7 @@ namespace LandFlipper.UI
             if (career.SkillPoints != shownPoints)
             {
                 shownPoints = career.SkillPoints;
-                pointsLabel.text = $"{shownPoints} puan · [TAB]";
+                pointsLabel.text = $"{shownPoints} puan!";
                 SetVisible(pointsLabel, shownPoints > 0);
             }
         }
@@ -241,12 +259,17 @@ namespace LandFlipper.UI
 
         void OnLeveledUp(int level)
         {
-            levelUpTitle.text = $"SEVİYE {level}!";
+            levelUpTitle.text = $"Seviye {level}!";
             FadeIn(levelUpBanner);
             levelUpHideTime = Time.unscaledTime + levelUpDuration;
         }
 
         void OnSkillUpgraded(string skillName, int level) => ShowToast($"{skillName} · Sv {level} açıldı");
+
+        void OnToolUpgraded(ToolKind kind, ToolDefinition tool)
+        {
+            if (tool != null) ShowToast($"Yeni alet: {tool.displayName} · {tool.PowerText}");
+        }
 
         void ShowToast(string message)
         {

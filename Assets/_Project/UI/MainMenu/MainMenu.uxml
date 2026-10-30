@@ -1,36 +1,41 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
     <Style src="../Styles/Common.uss" />
+    <Style src="MainMenu.uss" />
     <ui:VisualElement name="main-menu-root" class="screen main-menu">
-        <ui:VisualElement class="menu-shade" picking-mode="Ignore" />
-        <ui:VisualElement class="menu-card">
-            <ui:Label text="Land Flipper" class="title" />
-            <ui:Label text="Temizle · İnşa et · Sat" class="subtitle" />
+        <ui:VisualElement name="menu-column" class="mm-column">
 
-            <ui:VisualElement name="main-panel" class="panel">
-                <ui:Button name="single-button" text="Tek Oyunculu" class="lf-button primary" />
-                <ui:Button name="coop-button" text="Co-op" class="lf-button" />
-                <ui:Button name="settings-button" text="Ayarlar" class="lf-button" />
-                <ui:Button name="quit-button" text="Çıkış" class="lf-button subtle" />
+            <ui:VisualElement name="menu-logo" class="mm-logo">
+                <ui:Label text="Land" class="mm-logo-line" />
+                <ui:Label text="Flipper" class="mm-logo-line mm-logo-accent" />
             </ui:VisualElement>
 
-            <ui:VisualElement name="coop-panel" class="panel hidden">
-                <ui:TextField name="port-field" label="Port" value="7777" max-length="5" class="lf-field" />
-                <ui:Label text="OTURUM KUR" class="section-title" />
-                <ui:Button name="host-button" text="Oturum Kur (Host)" class="lf-button primary" />
-                <ui:VisualElement class="divider" />
-                <ui:Label text="OTURUMA KATIL" class="section-title" />
-                <ui:TextField name="address-field" label="Adres" value="localhost" class="lf-field" />
+            <ui:VisualElement name="main-panel" class="panel mm-buttons">
+                <ui:Button name="single-button" text="Oyna" class="lf-button primary mm-play mm-anim" />
+                <ui:Button name="coop-button" text="Co-op" class="lf-button mm-btn mm-anim" />
+                <ui:Button name="settings-button" text="Ayarlar" class="lf-button mm-btn mm-anim" />
+                <ui:Button name="quit-button" text="Çıkış" class="lf-button mm-btn mm-quit mm-anim" />
+            </ui:VisualElement>
+
+            <ui:VisualElement name="coop-panel" class="panel sheet mm-card mm-anim hidden">
+                <ui:VisualElement class="sticker sky"><ui:Label text="Co-op" /></ui:VisualElement>
+                <ui:TextField name="port-field" label="PORT" value="7777" max-length="5" class="lf-field" />
+                <ui:Button name="host-button" text="Oturum kur" class="lf-button primary" />
+                <ui:VisualElement class="mm-split">
+                    <ui:VisualElement class="rule mm-split-rule" />
+                    <ui:Label text="ya da" class="mm-split-text" />
+                    <ui:VisualElement class="rule mm-split-rule" />
+                </ui:VisualElement>
+                <ui:TextField name="address-field" label="ADRES" value="localhost" class="lf-field" />
                 <ui:Button name="join-button" text="Katıl" class="lf-button" />
                 <ui:Button name="back-button" text="Geri" class="lf-button subtle" />
             </ui:VisualElement>
 
-            <ui:VisualElement name="busy-panel" class="panel hidden">
-                <ui:Label name="busy-label" text="Bağlanılıyor..." class="body-text" />
-                <ui:Button name="cancel-button" text="İptal" class="lf-button subtle" />
+            <ui:VisualElement name="busy-panel" class="panel sheet mm-card mm-anim hidden">
+                <ui:Label name="busy-label" text="Bağlanılıyor..." class="body-text mm-busy" />
+                <ui:Button name="cancel-button" text="İptal" class="lf-button" />
             </ui:VisualElement>
 
             <ui:Label name="status-label" class="status" />
         </ui:VisualElement>
-        <ui:Label text="v0.1 prototip" class="version" />
     </ui:VisualElement>
 </ui:UXML>

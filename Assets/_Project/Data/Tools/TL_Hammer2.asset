@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf82630f8a010af4e96776f707abe041, type: 3}
+  m_Name: TL_Hammer2
+  m_EditorClassIdentifier: Assembly-CSharp::LandFlipper.Gameplay.ToolDefinition
+  id: hammer_sledge
+  kind: 2
+  tier: 2
+  displayName: Balyoz
+  description: "Koca bir balyoz: kayalar birka\xE7 darbede parampar\xE7a."
+  iconText: "\xC7"
+  price: 480
+  requiredLevel: 4
+  power: 3
+  visualPrefab: {fileID: 4674393279195779663, guid: 5c16bf7fe4dbd4641bb10c068c858448, type: 3}
+  gripPositionOffset: {x: 0, y: 0, z: 0}
+  gripEulerOffset: {x: 0, y: 0, z: 0}

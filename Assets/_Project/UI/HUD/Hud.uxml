@@ -1,11 +1,13 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
     <Style src="../Styles/Common.uss" />
+    <Style src="Hud.uss" />
     <ui:VisualElement name="hud-root" class="screen" picking-mode="Ignore">
         <ui:VisualElement name="crosshair" class="crosshair" picking-mode="Ignore" />
         <ui:Label name="prompt-label" class="hud-prompt hidden" picking-mode="Ignore" />
         <ui:Label name="xp-popup" class="hud-xp-popup hidden" picking-mode="Ignore" />
 
-        <ui:VisualElement name="level-panel" class="hud-level" picking-mode="Ignore">
+        <!-- sol üst: seviye ve ilerleme -->
+        <ui:VisualElement name="level-panel" class="hud-plate hud-level" picking-mode="Ignore">
             <ui:VisualElement class="hud-level-badge" picking-mode="Ignore">
                 <ui:Label name="hud-level-label" text="1" class="hud-level-value" picking-mode="Ignore" />
             </ui:VisualElement>
@@ -15,25 +17,27 @@
                     <ui:VisualElement name="hud-xp-fill" class="hud-xp-fill" picking-mode="Ignore" />
                 </ui:VisualElement>
             </ui:VisualElement>
-            <ui:Label name="hud-points" text="1 puan · [TAB]" class="hud-points hidden" picking-mode="Ignore" />
+            <ui:Label name="hud-points" text="1 puan" class="hud-points hidden" picking-mode="Ignore" />
         </ui:VisualElement>
 
-        <ui:VisualElement name="money-panel" class="hud-money" picking-mode="Ignore">
+        <!-- sağ üst: bütçe -->
+        <ui:VisualElement name="money-panel" class="hud-plate hud-money" picking-mode="Ignore">
             <ui:VisualElement class="hud-coin" picking-mode="Ignore" />
             <ui:Label name="money-label" text="0 TL" class="hud-money-value" picking-mode="Ignore" />
         </ui:VisualElement>
 
-        <ui:VisualElement name="carry-panel" class="hud-carry hidden" picking-mode="Ignore">
+        <!-- sağ alt: taşınan yük -->
+        <ui:VisualElement name="carry-panel" class="hud-plate hud-carry hidden" picking-mode="Ignore">
             <ui:Label name="carry-title" class="hud-carry-title" picking-mode="Ignore" />
             <ui:Label name="carry-list" class="hud-carry-list" picking-mode="Ignore" />
         </ui:VisualElement>
 
         <ui:VisualElement name="levelup-banner" class="hud-levelup hidden" picking-mode="Ignore">
-            <ui:Label name="levelup-title" text="SEVİYE 2" class="hud-levelup-title" picking-mode="Ignore" />
-            <ui:Label text="+1 yetenek puanı · [TAB] ile yetenek ağacını aç" class="hud-levelup-sub" picking-mode="Ignore" />
+                        <ui:Label name="levelup-title" text="Seviye 2" class="hud-levelup-title" picking-mode="Ignore" />
+            <ui:Label text="+1 yetenek puanı · Tab ile yetenekleri aç" class="hud-levelup-sub" picking-mode="Ignore" />
         </ui:VisualElement>
 
         <ui:Label name="toast-label" class="hud-toast hidden" picking-mode="Ignore" />
-        <ui:Label name="hint-label" text="Sol Tık: Kes/Kır · Basılı tut: Biç · E: Al/Sat (basılı: hepsini sat) · R: At (basılı: hepsi) · TAB: Yetenekler · V: Görünüm · Esc: Menü" class="hud-hint" picking-mode="Ignore" />
+        <ui:Label name="hint-label" text="" class="hud-hint" picking-mode="Ignore" />
     </ui:VisualElement>
 </ui:UXML>

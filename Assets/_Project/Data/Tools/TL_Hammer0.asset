@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf82630f8a010af4e96776f707abe041, type: 3}
+  m_Name: TL_Hammer0
+  m_EditorClassIdentifier: Assembly-CSharp::LandFlipper.Gameplay.ToolDefinition
+  id: hammer_stone
+  kind: 2
+  tier: 0
+  displayName: "Ta\u015F \xC7eki\xE7"
+  description: "Sapa ba\u011Flanm\u0131\u015F yuvarlak bir ta\u015F. Kayalar\u0131
+    zor k\u0131rar."
+  iconText: "\xC7"
+  price: 0
+  requiredLevel: 1
+  power: 1
+  visualPrefab: {fileID: 3088318794172114157, guid: 832b01c5136901d47b25c0191cdf9ca2, type: 3}
+  gripPositionOffset: {x: 0, y: 0, z: 0}
+  gripEulerOffset: {x: 0, y: 0, z: 0}

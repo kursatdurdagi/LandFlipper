@@ -88,6 +88,8 @@ namespace LandFlipper.UI
             // Esc yetenek ağacını ya da ayarları kapatıyorsa oyun menüsü bu tuşla açılıp kapanmasın
             if (!IsOpen && (SkillTreeController.IsAnyOpen || SkillTreeController.ClosedFrame == Time.frameCount))
                 return;
+            if (!IsOpen && (WorkbenchController.IsAnyOpen || WorkbenchController.ClosedFrame == Time.frameCount))
+                return;
             if (SettingsController.IsOpen || SettingsController.ConsumedEscapeFrame == Time.frameCount)
                 return;
 

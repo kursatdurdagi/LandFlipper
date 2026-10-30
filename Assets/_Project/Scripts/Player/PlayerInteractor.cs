@@ -1,6 +1,7 @@
 using System;
 using LandFlipper.Core;
 using LandFlipper.Gameplay;
+using LandFlipper.Player.Tools;
 using Mirror;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -25,6 +26,12 @@ namespace LandFlipper.Player
 
         FirstPersonController controller;
         PlayerCarry carry;
+        PlayerTools tools;
+
+        // savurma: vuruş, alet hedefe değdiği anda gönderilir
+        int pendingHitId = -1;
+        float pendingHitTime;
+        NodeKind pendingHitKind;
         InputAction primaryAction, interactAction, dropAction;
         float nextHitTime;
         float dropPressedAt = -1f;
@@ -61,6 +68,10 @@ namespace LandFlipper.Player
         public ResourceNode TargetNode { get; private set; }
         public Pickup TargetPickup { get; private set; }
         public SellStation TargetStation { get; private set; }
+        public Workbench TargetWorkbench { get; private set; }
+
+        /// <summary>Local oyuncu Alet Tezgâhı'nda etkileşime girdi (UI açılır).</summary>
+        public static event Action WorkbenchRequested;
         public string Prompt { get; private set; } = string.Empty;
 
         /// <summary>Local oyuncuya gösterilecek kısa bildirim.</summary>
@@ -70,6 +81,7 @@ namespace LandFlipper.Player
         {
             controller = GetComponent<FirstPersonController>();
             carry = GetComponent<PlayerCarry>();
+            tools = GetComponent<PlayerTools>();
             characterController = GetComponent<CharacterController>();
         }
 
@@ -97,6 +109,7 @@ namespace LandFlipper.Player
             {
                 ClearTarget();
                 ResetHold();
+                pendingHitId = -1;
                 sellHolding = false;
                 dropPressedAt = -1f;
                 return;
@@ -105,6 +118,7 @@ namespace LandFlipper.Player
             FindTarget();
             Prompt = BuildPrompt();
 
+            UpdatePendingHit();
             if (primaryAction.WasPressedThisFrame()) OnPrimary();
             UpdateHold();
             if (interactAction.WasPressedThisFrame()) OnInteract();
@@ -119,6 +133,7 @@ namespace LandFlipper.Player
             TargetNode = null;
             TargetPickup = null;
             TargetStation = null;
+            TargetWorkbench = null;
             Prompt = string.Empty;
         }
 
@@ -136,6 +151,7 @@ namespace LandFlipper.Player
             float pickupDistance = float.MaxValue;
             ResourceNode nodeHit = null;
             SellStation stationHit = null;
+            Workbench benchHit = null;
             float otherDistance = float.MaxValue;
 
             for (int i = 0; i < count; i++)
@@ -163,8 +179,10 @@ namespace LandFlipper.Player
                 }
 
                 var station = col.GetComponentInParent<SellStation>();
-                var node = station == null ? col.GetComponentInParent<ResourceNode>() : null;
+                var bench = station == null ? col.GetComponentInParent<Workbench>() : null;
+                var node = station == null && bench == null ? col.GetComponentInParent<ResourceNode>() : null;
                 if (station != null) stationHit = station;
+                else if (bench != null) benchHit = bench;
                 else if (node != null && !node.IsDepleted) nodeHit = node;
                 else if (col.isTrigger) continue;
 
@@ -177,6 +195,7 @@ namespace LandFlipper.Player
             else
             {
                 TargetStation = stationHit;
+                TargetWorkbench = benchHit;
                 TargetNode = nodeHit;
             }
         }
@@ -210,13 +229,18 @@ namespace LandFlipper.Player
                 return $"[{interactKey}] Sat · basılı tut: hepsi ({carry.Count} kaynak · {Currency.Format(total)})";
             }
 
+            if (TargetWorkbench != null)
+                return $"[{interactKey}] Alet Tezgâhı · Aletlerini geliştir";
+
             if (TargetNode != null)
             {
                 if (carry.IsCarrying) return $"Elin dolu · [{dropKey}] Bırak";
+                var tool = CareerState.Tool(ToolDefinition.KindFor(TargetNode.Kind));
+                string toolName = tool != null ? $" · {tool.displayName}" : string.Empty;
                 if (TargetNode.HoldDuration > 0f)
-                    return $"[{primaryKey} basılı tut] {TargetNode.ActionVerb} · {TargetNode.DisplayName}";
+                    return $"[{primaryKey} basılı tut] {TargetNode.ActionVerb} · {TargetNode.DisplayName}{toolName}";
                 string progress = TargetNode.MaxHits > 1 ? $" ({TargetNode.HitsTaken}/{TargetNode.MaxHits})" : string.Empty;
-                return $"[{primaryKey}] {TargetNode.ActionVerb} · {TargetNode.DisplayName}{progress}";
+                return $"[{primaryKey}] {TargetNode.ActionVerb} · {TargetNode.DisplayName}{progress}{toolName}";
             }
 
             return carry.IsCarrying ? $"[{dropKey}] Bırak · Basılı tut: hepsini bırak" : string.Empty;
@@ -235,13 +259,34 @@ namespace LandFlipper.Player
             if (TargetNode.HoldDuration > 0f) return; // basılı tutma UpdateHold'da işlenir
             if (Time.time < nextHitTime) return;
 
-            nextHitTime = Time.time + EffectiveHitCooldown;
-            controller.Kick(TargetNode.Kind == NodeKind.Grass ? 1.2f : 2.5f);
-            CmdHit(TargetNode.ObjectId);
+            float duration = EffectiveHitCooldown;
+            nextHitTime = Time.time + duration;
+
+            // Alet ele gelir ve savrulur; vuruş, alet hedefe değdiği anda gönderilir.
+            float impactDelay = tools != null ? tools.BeginSwing(ToolDefinition.KindFor(TargetNode.Kind), duration) : 0f;
+            pendingHitId = TargetNode.ObjectId;
+            pendingHitKind = TargetNode.Kind;
+            pendingHitTime = Time.time + impactDelay;
+            UpdatePendingHit();
         }
 
-        /// <summary>"Seri Eller" yeteneği basılı tutma süresini de kısaltır.</summary>
-        float EffectiveHoldDuration(ResourceNode node) => node.HoldDuration / (1f + CareerState.Stat(SkillStat.HitSpeed));
+        void UpdatePendingHit()
+        {
+            if (pendingHitId < 0 || Time.time < pendingHitTime) return;
+            controller.Kick(pendingHitKind == NodeKind.Grass || pendingHitKind == NodeKind.Bush ? 1.2f : 2.5f);
+            CmdHit(pendingHitId);
+            pendingHitId = -1;
+        }
+
+        /// <summary>
+        /// Basılı tutma süresi: "Seri Eller" yeteneği ve makasın kademesi (Terzi / Bahçe Makası) kısaltır.
+        /// </summary>
+        static float EffectiveHoldDuration(ResourceNode node)
+        {
+            var tool = CareerState.Tool(ToolDefinition.KindFor(node.Kind));
+            float toolSpeed = tool != null && tool.kind == ToolKind.Shears ? tool.SpeedMultiplier : 1f;
+            return node.HoldDuration / ((1f + CareerState.Stat(SkillStat.HitSpeed)) * toolSpeed);
+        }
 
         void UpdateHold()
         {
@@ -266,6 +311,7 @@ namespace LandFlipper.Player
             }
 
             float duration = EffectiveHoldDuration(holdNode);
+            tools?.SetWorking(ToolDefinition.KindFor(holdNode.Kind), true);
             holdTime += Time.deltaTime;
             HoldProgress = Mathf.Clamp01(holdTime / duration);
 
@@ -287,6 +333,7 @@ namespace LandFlipper.Player
 
         void ResetHold()
         {
+            if (holdNode != null) tools?.SetWorking(ToolKind.Shears, false);
             holdNode = null;
             holdTime = 0f;
             HoldProgress = 0f;
@@ -294,6 +341,12 @@ namespace LandFlipper.Player
 
         void OnInteract()
         {
+            if (TargetWorkbench != null)
+            {
+                WorkbenchRequested?.Invoke();
+                return;
+            }
+
             if (TargetPickup != null)
             {
                 if (!carry.HasRoomFor(TargetPickup))
@@ -394,7 +447,10 @@ namespace LandFlipper.Player
                 serverNextHitTime = NetworkTime.time + EffectiveHitCooldown * 0.8f;
             }
 
-            world.ServerApplyHit(objectId, transform.position);
+            // Alet kademesi vuruş gücünü belirler (biçmede tek vuruş yeter).
+            var tool = CareerState.Tool(ToolDefinition.KindFor(node.Kind));
+            int damage = node.HoldDuration > 0f || tool == null ? 1 : tool.Damage;
+            world.ServerApplyHit(objectId, transform.position, damage);
         }
 
         [Command]

@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf82630f8a010af4e96776f707abe041, type: 3}
+  m_Name: TL_Axe0
+  m_EditorClassIdentifier: Assembly-CSharp::LandFlipper.Gameplay.ToolDefinition
+  id: axe_stone
+  kind: 1
+  tier: 0
+  displayName: "Ta\u015F Balta"
+  description: "Sopaya ba\u011Flanm\u0131\u015F yontma ta\u015F. A\u011Fa\xE7lar\u0131
+    yava\u015F keser."
+  iconText: B
+  price: 0
+  requiredLevel: 1
+  power: 1
+  visualPrefab: {fileID: 3862963097044175712, guid: 91b7eeeef6398f84fa8347fbd8d11d2d, type: 3}
+  gripPositionOffset: {x: 0, y: 0, z: 0}
+  gripEulerOffset: {x: 0, y: 0, z: 0}

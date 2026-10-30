@@ -4,6 +4,7 @@ using LandFlipper.Gameplay;
 using LandFlipper.Network;
 using LandFlipper.Player;
 using LandFlipper.Player.Animation;
+using LandFlipper.Player.Tools;
 using LandFlipper.UI;
 using LandFlipper.World;
 using Mirror;
@@ -40,6 +41,9 @@ namespace LandFlipper.EditorTools
         const string SkillTreeUxmlPath = Root + "/UI/SkillTree/SkillTree.uxml";
         const string SkillsFolder = Root + "/Data/Skills";
         const string SettingsUxmlPath = Root + "/UI/Settings/Settings.uxml";
+        const string WorkbenchUxmlPath = Root + "/UI/Workbench/Workbench.uxml";
+        const string ToolsFolder = Root + "/Data/Tools";
+        const string ToolPrefabFolder = Root + "/Prefabs/Tools";
 
         const float GamePlotHalfSize = 18f;
 
@@ -80,14 +84,16 @@ namespace LandFlipper.EditorTools
             LightingSetup.ConfigurePipeline();
             volumeProfile = LightingSetup.CreateProfile();
             skyMaterial = LightingSetup.CreateSkybox();
+            LightingSetup.CreateSunFlare();
 
             var panelSettings = CreatePanelSettings();
             var kit = LowPolyWorldBuilder.LoadKit();
             var resources = CreateResources(kit);
             var skills = CreateSkills();
+            var tools = CreateTools(kit);
             var characterVisual = CreateCharacterVisualPrefab();
             var playerPrefab = CreatePlayerPrefab(characterVisual, playerLayer);
-            CreateGameScene(panelSettings, kit, resources, skills);
+            CreateGameScene(panelSettings, kit, resources, skills, tools);
             CreateMainMenuScene(panelSettings, playerPrefab, characterVisual, kit, resources);
 
             EditorBuildSettings.scenes = new[]
@@ -246,6 +252,167 @@ namespace LandFlipper.EditorTools
             skill.prerequisiteLevel = prerequisiteLevel;
             EditorUtility.SetDirty(skill);
             return skill;
+        }
+
+        // ---------------------------------------------------------------- Tools
+
+        /// <summary>
+        /// Alet kademeleri ve dummy modelleri. Model kökü = tutma noktası, +Y aletin başı, +Z vuran yüz.
+        /// Gerçek model atanmışsa (Inspector'dan visualPrefab değiştirildiyse) üzerine yazılmaz.
+        /// </summary>
+        static ToolDefinition[] CreateTools(LowPolyWorldBuilder.Kit kit)
+        {
+            LowPolyWorldBuilder.EnsureFolder(ToolsFolder);
+            LowPolyWorldBuilder.EnsureFolder(ToolPrefabFolder);
+
+            var metal = LowPolyWorldBuilder.Mat("M_ToolMetal", 0.70f, 0.72f, 0.76f, 0.55f);
+            var metalDark = LowPolyWorldBuilder.Mat("M_ToolMetalDark", 0.36f, 0.37f, 0.40f, 0.35f);
+            var steel = LowPolyWorldBuilder.Mat("M_ToolSteel", 0.84f, 0.87f, 0.92f, 0.7f);
+            var plasticRed = LowPolyWorldBuilder.Mat("M_ToolPlasticRed", 0.92f, 0.30f, 0.26f, 0.4f);
+            var plasticBlue = LowPolyWorldBuilder.Mat("M_ToolPlasticBlue", 0.30f, 0.55f, 0.92f, 0.4f);
+            var handleBlack = LowPolyWorldBuilder.Mat("M_ToolHandleBlack", 0.13f, 0.12f, 0.12f, 0.3f);
+            var handleGreen = LowPolyWorldBuilder.Mat("M_ToolHandleGreen", 0.25f, 0.55f, 0.28f, 0.3f);
+            var handleRed = LowPolyWorldBuilder.Mat("M_ToolHandleRed", 0.72f, 0.20f, 0.16f, 0.3f);
+            var stone = LowPolyWorldBuilder.Mat("M_ToolStone", 0.55f, 0.53f, 0.50f);
+            var box = kit.Box;
+
+            GameObject P(Transform parent, string n, Vector3 pos, Vector3 size, Material m, Vector3 euler = default)
+            {
+                var go = new GameObject(n);
+                go.transform.SetParent(parent, false);
+                go.transform.localPosition = pos;
+                go.transform.localScale = size;
+                go.transform.localRotation = Quaternion.Euler(euler);
+                AddMesh(go, box, m);
+                return go;
+            }
+
+            // ---- makaslar: iki yarı (ağız + sap) vida ekseni Z etrafında açılır
+            System.Action<GameObject> Shears(float bladeLength, float handleLength, float bladeWidth, Material blade, Material handleA, Material handleB, float ring)
+            {
+                return root =>
+                {
+                    // tutma noktası halkalarda: vida, sap boyu kadar yukarıda
+                    float pivotY = handleLength + ring * 0.3f;
+                    Transform Half(string n, float side, Material handle)
+                    {
+                        var half = new GameObject(n).transform;
+                        half.SetParent(root.transform, false);
+                        half.localPosition = new Vector3(0f, pivotY, 0f);
+                        // ağız: vidadan yukarı, uca doğru incelir
+                        P(half, "Blade", new Vector3(side * bladeWidth * 0.25f, bladeLength * 0.5f, side * 0.004f),
+                            new Vector3(bladeWidth, bladeLength, 0.006f), blade, new Vector3(0f, 0f, -side * 2f));
+                        P(half, "Tip", new Vector3(side * bladeWidth * 0.1f, bladeLength + 0.01f, side * 0.004f),
+                            new Vector3(bladeWidth * 0.5f, 0.025f, 0.006f), blade);
+                        // sap: vidadan aşağı, ucunda halka
+                        P(half, "Arm", new Vector3(side * 0.012f, -handleLength * 0.5f, side * 0.004f),
+                            new Vector3(0.014f, handleLength, 0.012f), handle, new Vector3(0f, 0f, side * 6f));
+                        P(half, "Ring", new Vector3(side * (0.012f + ring * 0.35f), -handleLength - ring * 0.3f, side * 0.004f),
+                            new Vector3(ring, ring * 0.7f, 0.016f), handle);
+                        return half;
+                    }
+                    var a = Half("BladeA", 1f, handleA);
+                    var b = Half("BladeB", -1f, handleB);
+                    P(root.transform, "Screw", new Vector3(0f, pivotY, 0f), new Vector3(0.016f, 0.016f, 0.02f), metalDark);
+                    root.AddComponent<ToolVisual>().EditorSetup(a, b, Vector3.forward, 16f);
+                };
+            }
+
+            // ---- balta: sap +Y, ağız +Z yönünde
+            System.Action<GameObject> Axe(float length, Material handle, Material head, Vector3 headSize, Material edge, bool lashing)
+            {
+                return root =>
+                {
+                    float bottom = -0.1f;
+                    P(root.transform, "Handle", new Vector3(0f, bottom + length * 0.5f, 0f), new Vector3(0.034f, length, 0.038f), handle);
+                    float headY = bottom + length - 0.09f;
+                    P(root.transform, "Head", new Vector3(0f, headY, headSize.z * 0.35f), headSize, head);
+                    P(root.transform, "Edge", new Vector3(0f, headY, headSize.z * 0.35f + headSize.z * 0.5f),
+                        new Vector3(headSize.x * 0.6f, headSize.y * 1.35f, 0.025f), edge);
+                    P(root.transform, "Poll", new Vector3(0f, headY, -0.03f), new Vector3(headSize.x * 1.1f, headSize.y * 0.8f, 0.05f), head);
+                    if (lashing)
+                    {
+                        P(root.transform, "LashA", new Vector3(0f, headY + 0.045f, 0f), new Vector3(0.05f, 0.018f, 0.05f), kit.Twine, new Vector3(0f, 0f, 20f));
+                        P(root.transform, "LashB", new Vector3(0f, headY - 0.045f, 0f), new Vector3(0.05f, 0.018f, 0.05f), kit.Twine, new Vector3(0f, 0f, -20f));
+                    }
+                };
+            }
+
+            // ---- çekiç: sap +Y, baş Z ekseninde iki yana
+            System.Action<GameObject> Hammer(float length, Material handle, Material head, Vector3 headSize, bool lashing, bool rough)
+            {
+                return root =>
+                {
+                    float bottom = -0.1f;
+                    P(root.transform, "Handle", new Vector3(0f, bottom + length * 0.5f, 0f), new Vector3(0.034f, length, 0.034f), handle);
+                    float headY = bottom + length - headSize.y * 0.45f;
+                    P(root.transform, "Head", new Vector3(0f, headY, 0f), headSize, head, rough ? new Vector3(8f, 12f, -6f) : Vector3.zero);
+                    if (rough)
+                        P(root.transform, "Lump", new Vector3(0.01f, headY + 0.02f, headSize.z * 0.3f), headSize * 0.6f, head, new Vector3(-15f, 30f, 10f));
+                    else
+                        P(root.transform, "Face", new Vector3(0f, headY, headSize.z * 0.5f), new Vector3(headSize.x * 1.15f, headSize.y * 1.15f, 0.02f), metalDark);
+                    if (lashing)
+                        P(root.transform, "Lash", new Vector3(0f, headY - headSize.y * 0.6f, 0f), new Vector3(0.05f, 0.03f, 0.05f), kit.Twine);
+                };
+            }
+
+            return new[]
+            {
+                Tool("TL_Shears0", "shears_kid", ToolKind.Shears, 0, "Çocuk Makası", "Küçük, kör uçlu bir okul makası. Çimi zar zor keser.",
+                    0, 1, 1f, Shears(0.085f, 0.045f, 0.02f, metal, plasticRed, plasticBlue, 0.05f)),
+                Tool("TL_Shears1", "shears_tailor", ToolKind.Shears, 1, "Terzi Makası", "Uzun ve keskin ağızlar; çimi çok daha hızlı biçer.",
+                    120, 2, 1.8f, Shears(0.13f, 0.06f, 0.02f, steel, handleBlack, handleBlack, 0.045f)),
+                Tool("TL_Shears2", "shears_garden", ToolKind.Shears, 2, "Bahçe Makası", "Uzun saplı budama makası. Çim ve çalılar için ideal.",
+                    380, 4, 3f, Shears(0.17f, 0.2f, 0.035f, metalDark, handleGreen, handleGreen, 0.05f)),
+
+                Tool("TL_Axe0", "axe_stone", ToolKind.Axe, 0, "Taş Balta", "Sopaya bağlanmış yontma taş. Ağaçları yavaş keser.",
+                    0, 1, 1f, Axe(0.5f, kit.Wood, stone, new Vector3(0.06f, 0.1f, 0.13f), stone, true)),
+                Tool("TL_Axe1", "axe_iron", ToolKind.Axe, 1, "Demir Balta", "Ağır demir ağız: her vuruşta iki kat iş.",
+                    200, 3, 2f, Axe(0.62f, kit.WoodDark, metalDark, new Vector3(0.035f, 0.12f, 0.15f), metal, false)),
+                Tool("TL_Axe2", "axe_steel", ToolKind.Axe, 2, "Çelik Balta", "Keskin çelik ağız, ağaçları birkaç darbede devirir.",
+                    520, 5, 3f, Axe(0.72f, handleRed, steel, new Vector3(0.035f, 0.15f, 0.18f), steel, false)),
+
+                Tool("TL_Hammer0", "hammer_stone", ToolKind.Hammer, 0, "Taş Çekiç", "Sapa bağlanmış yuvarlak bir taş. Kayaları zor kırar.",
+                    0, 1, 1f, Hammer(0.42f, kit.Wood, stone, new Vector3(0.09f, 0.08f, 0.14f), true, true)),
+                Tool("TL_Hammer1", "hammer_iron", ToolKind.Hammer, 1, "Demir Çekiç", "Taşları ve kulübe tahtalarını daha kolay söker.",
+                    160, 2, 2f, Hammer(0.48f, kit.WoodDark, metalDark, new Vector3(0.06f, 0.06f, 0.17f), false, false)),
+                Tool("TL_Hammer2", "hammer_sledge", ToolKind.Hammer, 2, "Balyoz", "Koca bir balyoz: kayalar birkaç darbede paramparça.",
+                    480, 4, 3f, Hammer(0.78f, kit.WoodDark, metalDark, new Vector3(0.11f, 0.11f, 0.28f), false, false)),
+            };
+        }
+
+        static ToolDefinition Tool(string asset, string id, ToolKind kind, int tier, string name, string description,
+            int price, int requiredLevel, float power, System.Action<GameObject> buildVisual)
+        {
+            string path = $"{ToolsFolder}/{asset}.asset";
+            var tool = AssetDatabase.LoadAssetAtPath<ToolDefinition>(path);
+            if (tool == null)
+            {
+                tool = ScriptableObject.CreateInstance<ToolDefinition>();
+                AssetDatabase.CreateAsset(tool, path);
+                // denge değerleri sadece ilk oluşturmada; sonra Inspector'dan ayarlanır
+                tool.price = price;
+                tool.requiredLevel = requiredLevel;
+                tool.power = power;
+            }
+            tool.id = id;
+            tool.kind = kind;
+            tool.tier = tier;
+            tool.displayName = name;
+            tool.description = description;
+            tool.iconText = ToolDefinition.KindName(kind).Substring(0, 1);
+
+            // dummy model (gerçek model atanmışsa dokunma)
+            string prefabPath = $"{ToolPrefabFolder}/Dummy_{asset}.prefab";
+            var root = new GameObject($"Dummy_{asset}");
+            buildVisual(root);
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+            Object.DestroyImmediate(root);
+            if (tool.visualPrefab == null || AssetDatabase.GetAssetPath(tool.visualPrefab) == prefabPath)
+                tool.visualPrefab = prefab;
+
+            EditorUtility.SetDirty(tool);
+            return tool;
         }
 
         static ResourceDefinition Definition(string asset, string id, string displayName, int price, int slots, float stackHeight, Vector3 carryEuler)
@@ -437,8 +604,10 @@ namespace LandFlipper.EditorTools
                 smr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 smr.updateWhenOffscreen = true;
             }
-            arms.AddComponent<FirstPersonArms>().EditorSetup(controller, playerCarry, viewAnchor.transform);
+            var firstPersonArms = arms.AddComponent<FirstPersonArms>();
+            firstPersonArms.EditorSetup(controller, playerCarry, viewAnchor.transform);
             player.AddComponent<PlayerSkills>();
+            player.AddComponent<PlayerTools>().EditorSetup(animator, firstPersonArms, pivot.transform);
             var interactor = player.AddComponent<PlayerInteractor>();
             interactor.EditorSetMask(~((1 << playerLayer) | (1 << 2)));
 
@@ -473,20 +642,24 @@ namespace LandFlipper.EditorTools
             }
             LightingSetup.AddGlobalVolume(volumeProfile);
 
-            LowPolyWorldBuilder.BuildPlot("MenuDiorama", new LowPolyWorldBuilder.PlotSettings
+            var diorama = LowPolyWorldBuilder.BuildPlot("MenuDiorama", new LowPolyWorldBuilder.PlotSettings
             {
                 Seed = 7,
                 HalfSize = 9f,
                 Interactive = false,
                 TreeCount = 7,
                 RockCount = 4,
-                GrassCount = 90,
+                GrassCount = 110,
                 BushCount = 6,
-                FlowerCount = 14,
+                FlowerCount = 18,
                 OuterTreeCount = 45,
+                IncludeShack = true,           // düzeltilmeyi bekleyen eski kulübe
                 ClearCenter = new Vector3(0f, 0f, 2f),
                 ClearRadius = 4f
             }, kit);
+            // oyunun konusu tek karede: satılık arazi, kütük ve balya yığını
+            LowPolyWorldBuilder.BuildForSaleSign(diorama.transform, new Vector3(2.1f, 0f, -0.9f), 195f);
+            LowPolyWorldBuilder.BuildPropPile(diorama.transform, new Vector3(-1.6f, 0f, -1.6f), 20f);
 
             var character = (GameObject)PrefabUtility.InstantiatePrefab(characterVisualPrefab);
             character.name = "MenuCharacter";
@@ -517,7 +690,8 @@ namespace LandFlipper.EditorTools
             EditorSceneManager.SaveScene(scene, MainMenuScenePath);
         }
 
-        static void CreateGameScene(PanelSettings panelSettings, LowPolyWorldBuilder.Kit kit, ResourceSet resources, SkillDefinition[] skills)
+        static void CreateGameScene(PanelSettings panelSettings, LowPolyWorldBuilder.Kit kit, ResourceSet resources, SkillDefinition[] skills,
+            ToolDefinition[] tools)
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 
@@ -549,13 +723,16 @@ namespace LandFlipper.EditorTools
                 ClearRadius = 4.5f,
                 IncludeShack = true,
                 IncludeSellStation = true,
+                IncludeWorkbench = true,
                 PriceBoardText = resources.PriceBoardText
             }, kit);
 
             var plotNetwork = new GameObject("PlotNetwork");
             plotNetwork.AddComponent<NetworkIdentity>();
             plotNetwork.AddComponent<PlotWorld>().EditorSetup(h, 1, resources.Log, resources.RockChunk, resources.GrassBale, resources.Plank);
-            plotNetwork.AddComponent<CareerState>().EditorSetSkills(skills);
+            var career = plotNetwork.AddComponent<CareerState>();
+            career.EditorSetSkills(skills);
+            career.EditorSetTools(tools);
 
             var spawnRoot = new GameObject("SpawnPoints");
             Vector3[] offsets =
@@ -582,6 +759,11 @@ namespace LandFlipper.EditorTools
             skillTreeGo.transform.SetParent(uiRoot.transform, false);
             AddDocument(skillTreeGo, panelSettings, SkillTreeUxmlPath, 5);
             skillTreeGo.AddComponent<SkillTreeController>();
+
+            var benchGo = new GameObject("Workbench");
+            benchGo.transform.SetParent(uiRoot.transform, false);
+            AddDocument(benchGo, panelSettings, WorkbenchUxmlPath, 6);
+            benchGo.AddComponent<WorkbenchController>();
 
             var menuGo = new GameObject("GameMenu");
             menuGo.transform.SetParent(uiRoot.transform, false);

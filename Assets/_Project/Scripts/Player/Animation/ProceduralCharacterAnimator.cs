@@ -36,6 +36,22 @@ namespace LandFlipper.Player.Animation
         public bool IsHolding { get; set; }
         public Transform HoldTarget { get; set; }
 
+        /// <summary>Sağ kol kemikleri (alet IK'sı için, PlayerTools bu animatörden sonra çalışır).</summary>
+        public bool TryGetRightArm(out Transform upper, out Transform middle, out Transform end, out Quaternion endBindLocal)
+        {
+            if (!initialized || rightArm == null)
+            {
+                upper = middle = end = null;
+                endBindLocal = Quaternion.identity;
+                return false;
+            }
+            upper = rightArm.Upper;
+            middle = rightArm.Middle;
+            end = rightArm.End;
+            endBindLocal = rightArm.EndBindLocal;
+            return true;
+        }
+
         /// <summary>Animasyonun gözlemlenen yatay hızı (debug/test).</summary>
         public float CurrentSpeed { get; private set; }
 

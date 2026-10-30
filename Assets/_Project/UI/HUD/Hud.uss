@@ -1,0 +1,278 @@
+/* Land Flipper — Oyun içi HUD (tombul çizilmiş stil)
+   Köşelerde küçük krem plakalar; dünyayı kapatmaz, ama oyuncak gibi okunur. */
+
+.hud-plate {
+    position: absolute;
+    background-color: var(--cream);
+    border-width: 2px;
+    border-bottom-width: 4px;
+    border-color: var(--ink);
+    border-radius: 16px;
+}
+
+/* ---------------------------------------------------------------- nişangâh */
+
+.crosshair {
+    width: 7px;
+    height: 7px;
+    border-radius: 4px;
+    background-color: var(--cream);
+    border-width: 2px;
+    border-color: var(--ink);
+}
+
+.hud-hold-ring {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 48px;
+    height: 48px;
+    margin-left: -24px;
+    margin-top: -24px;
+}
+
+/* ---------------------------------------------------------------- ipucu balonu */
+
+.hud-prompt {
+    position: absolute;
+    left: 50%;
+    top: 57%;
+    translate: -50% 0;
+    padding: 8px 16px 9px 16px;
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: var(--ink);
+    background-color: var(--cream);
+    border-width: 2px;
+    border-bottom-width: 4px;
+    border-color: var(--ink);
+    border-radius: 14px;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- seviye */
+
+.hud-level {
+    top: 18px;
+    left: 18px;
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 14px 6px 6px;
+    border-radius: 30px;
+}
+
+.hud-level-badge {
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 22px;
+    border-width: 2px;
+    border-bottom-width: 4px;
+    border-color: var(--ink);
+    background-color: var(--sun);
+    margin-right: 10px;
+}
+
+.hud-level-value {
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: var(--ink);
+}
+
+.hud-level-info {
+    width: 150px;
+}
+
+.hud-xp-label {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: var(--ink-soft);
+    margin: 0 0 4px 2px;
+}
+
+.hud-xp-track {
+    height: 12px;
+    border-radius: 6px;
+    border-width: 2px;
+    border-color: var(--ink);
+    background-color: var(--cream-2);
+    overflow: hidden;
+}
+
+.hud-xp-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 4px;
+    background-color: var(--leaf);
+    transition-property: width;
+    transition-duration: 0.35s;
+}
+
+.hud-points {
+    margin-left: 12px;
+    padding: 3px 10px 4px 10px;
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: var(--cream);
+    background-color: var(--tomato);
+    border-width: 2px;
+    border-color: var(--ink);
+    border-radius: 12px;
+    rotate: -4deg;
+}
+
+.hud-xp-popup {
+    position: absolute;
+    left: 51.5%;
+    top: 46%;
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: var(--sun);
+    -unity-text-outline-width: 2px;
+    -unity-text-outline-color: var(--ink);
+    transition-property: opacity, translate;
+    transition-duration: 0.25s;
+}
+
+.hud-xp-popup.fade {
+    opacity: 0;
+    translate: 0 -16px;
+}
+
+/* ---------------------------------------------------------------- bütçe */
+
+.hud-money {
+    top: 18px;
+    right: 18px;
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 18px 7px 7px;
+    border-radius: 28px;
+    transition-property: scale, rotate;
+    transition-duration: 0.18s;
+    transition-timing-function: ease-out-back;
+}
+
+.hud-money.pulse {
+    scale: 1.12 1.12;
+    rotate: -3deg;
+}
+
+.hud-coin {
+    width: 30px;
+    height: 30px;
+    border-radius: 15px;
+    border-width: 2px;
+    border-bottom-width: 3px;
+    border-color: var(--ink);
+    background-color: var(--sun);
+    margin-right: 10px;
+}
+
+.hud-money-value {
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: var(--ink);
+}
+
+/* ---------------------------------------------------------------- yük */
+
+.hud-carry {
+    right: 18px;
+    bottom: 18px;
+    min-width: 190px;
+    padding: 10px 16px 12px 16px;
+    rotate: 1deg;
+}
+
+.hud-carry-title {
+    font-size: 12px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    color: var(--wood);
+    padding-bottom: 6px;
+    margin-bottom: 6px;
+    border-bottom-width: 2px;
+    border-color: var(--cream-3);
+}
+
+.hud-carry-list {
+    font-size: 15px;
+    color: var(--ink);
+    white-space: normal;
+}
+
+/* ---------------------------------------------------------------- seviye atlama */
+
+.hud-levelup {
+    position: absolute;
+    top: 14%;
+    left: 50%;
+    translate: -50% 0;
+    align-items: center;
+    padding: 10px 34px 14px 34px;
+    background-color: var(--sun);
+    border-width: 3px;
+    border-bottom-width: 8px;
+    border-color: var(--ink);
+    border-radius: 22px;
+    rotate: -2deg;
+    transition-property: opacity, scale;
+    transition-duration: 0.3s;
+    transition-timing-function: ease-out-back;
+}
+
+.hud-levelup.fade {
+    opacity: 0;
+    scale: 0.8 0.8;
+}
+
+.hud-levelup-title {
+    font-size: 38px;
+    -unity-font-style: bold;
+    color: var(--cream);
+    -unity-text-outline-width: 3px;
+    -unity-text-outline-color: var(--ink);
+    text-shadow: 0 4px 0 rgba(59, 42, 31, 1);
+    margin: 0 0 6px 0;
+}
+
+.hud-levelup-sub {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: var(--ink);
+}
+
+/* ---------------------------------------------------------------- bildirim */
+
+.hud-toast {
+    position: absolute;
+    top: 86px;
+    left: 50%;
+    translate: -50% 0;
+    padding: 8px 16px 9px 16px;
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: var(--ink);
+    background-color: var(--cream);
+    border-width: 2px;
+    border-bottom-width: 4px;
+    border-color: var(--ink);
+    border-radius: 14px;
+    white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- tuş satırı */
+
+.hud-hint {
+    position: absolute;
+    left: 20px;
+    bottom: 16px;
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: var(--cream);
+    -unity-text-outline-width: 1.5px;
+    -unity-text-outline-color: rgba(59, 42, 31, 0.9);
+}

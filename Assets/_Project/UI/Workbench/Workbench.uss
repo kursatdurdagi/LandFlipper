@@ -1,0 +1,321 @@
+/* Land Flipper — Alet Tezgâhı (mağaza): güneş sarısı etiket, oyuncak dükkânı kartları */
+
+.bench-panel {
+    width: 1100px;
+    max-width: 94%;
+    max-height: 90%;
+    padding: 30px 30px 18px 30px;
+}
+
+.bench-sticker {
+    rotate: -2.5deg;
+}
+
+.bench-sticker > Label {
+    color: var(--ink);
+    -unity-text-outline-width: 0;
+    text-shadow: 0 2px 0 rgba(255, 246, 228, 0.6);
+}
+
+/* ---------------------------------------------------------------- seviye / bütçe */
+
+.bench-meta {
+    flex-direction: row;
+    justify-content: flex-end;
+    margin: 0 8px 20px 8px;
+}
+
+.bench-pill {
+    flex-direction: row;
+    align-items: center;
+    height: 44px;
+    padding: 0 16px 0 14px;
+    margin-left: 10px;
+    border-width: 2px;
+    border-bottom-width: 4px;
+    border-color: var(--ink);
+    border-radius: 22px;
+    background-color: var(--cream-2);
+}
+
+.bench-pill-caption {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: var(--ink-soft);
+    margin-right: 6px;
+}
+
+.bench-pill-value {
+    font-size: 19px;
+    -unity-font-style: bold;
+    color: var(--ink);
+}
+
+.bench-pill-money {
+    padding-left: 6px;
+    background-color: var(--cream);
+}
+
+.bench-coin {
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+    border-width: 2px;
+    border-bottom-width: 3px;
+    border-color: var(--ink);
+    background-color: var(--sun);
+    margin-right: 8px;
+}
+
+/* ---------------------------------------------------------------- kartlar */
+
+.bench-cards {
+    flex-direction: row;
+    flex-grow: 1;
+}
+
+.tool-card {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin: 0 8px;
+    padding: 16px 16px 14px 16px;
+    background-color: #FFFDF7;
+    border-width: 2px;
+    border-bottom-width: 6px;
+    border-color: var(--ink);
+    border-radius: 20px;
+    transition-property: translate, rotate;
+    transition-duration: 0.15s;
+    transition-timing-function: ease-out-back;
+}
+
+.tool-card:hover {
+    translate: 0 -4px;
+    rotate: 0.6deg;
+}
+
+.tool-card.affordable {
+    background-color: var(--sun-soft);
+}
+
+.tool-card.maxed {
+    background-color: var(--leaf-soft);
+}
+
+.tool-caption-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.tool-kind {
+    font-size: 12px;
+    -unity-font-style: bold;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+}
+
+.tool-tier {
+    padding: 1px 8px 2px 8px;
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: var(--ink);
+    background-color: var(--cream-2);
+    border-radius: 8px;
+}
+
+.tool-card-top {
+    flex-direction: row;
+    align-items: center;
+}
+
+.tool-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    border-width: 2px;
+    border-bottom-width: 5px;
+    border-color: var(--ink);
+    align-items: center;
+    justify-content: center;
+    margin-right: 14px;
+    rotate: -5deg;
+}
+
+.tool-icon-text {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: var(--cream);
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: var(--ink);
+}
+
+.tool-kind-shears { background-color: var(--leaf); }
+.tool-kind-axe { background-color: var(--tomato); }
+.tool-kind-hammer { background-color: var(--sky); }
+
+.tool-kind-group {
+    flex-grow: 1;
+}
+
+.tool-name {
+    font-size: 21px;
+    -unity-font-style: bold;
+    color: var(--ink);
+}
+
+.tool-pips {
+    flex-direction: row;
+    margin-top: 6px;
+}
+
+.tool-pip {
+    width: 14px;
+    height: 14px;
+    border-radius: 7px;
+    border-width: 2px;
+    border-color: var(--ink);
+    margin-right: 4px;
+    background-color: var(--cream);
+}
+
+.tool-pip.filled {
+    background-color: var(--sun);
+}
+
+.tool-desc {
+    font-size: 14px;
+    color: var(--ink-soft);
+    white-space: normal;
+    margin-top: 12px;
+}
+
+.tool-stat {
+    align-self: flex-start;
+    padding: 2px 10px 3px 10px;
+    margin-top: 8px;
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: var(--leaf-lip);
+    background-color: var(--leaf-soft);
+    border-radius: 10px;
+}
+
+.tool-spacer {
+    flex-grow: 1;
+    min-height: 14px;
+}
+
+/* sonraki kademe */
+.tool-next {
+    padding: 10px 12px 10px 12px;
+    background-color: var(--cream-2);
+    border-radius: 14px;
+}
+
+.tool-next-caption {
+    font-size: 11px;
+    -unity-font-style: bold;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+}
+
+.tool-next-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 4px;
+}
+
+.tool-next-name {
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: var(--ink);
+}
+
+/* fiyat etiketi: biraz eğik, bağlı bir kâğıt etiket gibi */
+.tool-price {
+    padding: 2px 10px 4px 10px;
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: var(--ink);
+    background-color: var(--sun);
+    border-width: 2px;
+    border-bottom-width: 4px;
+    border-color: var(--ink);
+    border-radius: 10px;
+    rotate: 3deg;
+}
+
+.tool-price.missing {
+    background-color: #FCE1D8;
+    color: var(--tomato-lip);
+}
+
+.tool-next-stat {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-top: 4px;
+}
+
+.tool-req {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+.tool-req.missing {
+    color: var(--tomato-lip);
+    -unity-font-style: bold;
+}
+
+.tool-button {
+    height: 46px;
+    margin: 12px 0 0 0;
+    font-size: 17px;
+    -unity-font-style: bold;
+    border-width: 2px;
+    border-bottom-width: 5px;
+    border-color: var(--ink);
+    border-radius: 14px;
+    background-color: var(--leaf);
+    color: var(--cream);
+    transition-property: translate, border-bottom-width;
+    transition-duration: 0.1s;
+}
+
+.tool-button:hover {
+    translate: 0 -2px;
+}
+
+.tool-button:active {
+    translate: 0 2px;
+    border-bottom-width: 2px;
+}
+
+.tool-button:disabled {
+    background-color: var(--cream-2);
+    border-color: var(--cream-3);
+    color: var(--muted);
+    opacity: 1;
+}
+
+/* ---------------------------------------------------------------- alt */
+
+.bench-footer {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin: 16px 8px 0 8px;
+}
+
+.bench-footer-text {
+    font-size: 13px;
+    color: var(--ink-soft);
+}
+
+.bench-close {
+    min-width: 140px;
+    margin: 0;
+}

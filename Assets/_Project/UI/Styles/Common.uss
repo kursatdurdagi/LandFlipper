@@ -1,19 +1,42 @@
-/* Land Flipper - ortak UI Toolkit stilleri (cozy, sıcak palet) */
+/* =====================================================================
+   Land Flipper — UI tasarım sistemi (v2: "çizilmiş tombul" stil)
+   Elle çizilmiş gibi: koyu kahve kontur, yumuşak köşeler, alt kenarda
+   kalın "dudak" ile basılabilir 3D his. Gradient yok; derinlik = kontur + dudak.
+
+   Kontur: 2px (küçük) · 3px (kart/panel)      Dudak: 4-5px (buton) · 8px (panel)
+   Yarıçap: 10 (küçük) · 14 (buton) · 22 (panel) · tam (rozet/hap)
+   Tipografi: 12 · 14 · 16 · 20 · 28 · 72 (logo)
+   ===================================================================== */
+
 :root {
-    --lf-bg: #2F3A2C;
-    --lf-card: #F4EBD9;
-    --lf-card-2: #EBDFC6;
-    --lf-ink: #3B2F25;
-    --lf-muted: #7A6A58;
-    --lf-line: #D9CBB0;
-    --lf-accent: #5E8C4A;
-    --lf-accent-hover: #6FA157;
-    --lf-accent-ink: #FFFDF6;
-    --lf-neutral: #E8DCC3;
-    --lf-neutral-hover: #DFCFB0;
-    --lf-danger: #B5533C;
-    --lf-danger-hover: #C4644C;
+    /* yüzeyler */
+    --cream: #FFF6E4;
+    --cream-2: #F7E9CD;
+    --cream-3: #EED9B2;
+
+    /* kontur ve metin */
+    --ink: #3B2A1F;
+    --ink-soft: #6A5242;
+    --muted: #9B856F;
+
+    /* renkler (topraksı ama neşeli) */
+    --leaf: #79B04A;
+    --leaf-lip: #4E8530;
+    --leaf-soft: #E2F0CF;
+    --sun: #F5C24A;
+    --sun-lip: #C88F26;
+    --sun-soft: #FCEBC0;
+    --tomato: #E46A4B;
+    --tomato-lip: #AE442E;
+    --sky: #5DB2D6;
+    --sky-lip: #3884A6;
+    --wood: #B77B48;
+    --wood-lip: #7F512E;
+
+    --scrim: rgba(44, 30, 20, 0.55);
 }
+
+/* ---------------------------------------------------------------- iskelet */
 
 .screen {
     position: absolute;
@@ -29,48 +52,99 @@
     display: none;
 }
 
-/* ---------- Kart / başlıklar ---------- */
-.menu-card {
-    width: 460px;
-    padding: 40px 40px 32px 40px;
-    background-color: var(--lf-card);
-    border-radius: 18px;
-    border-width: 2px;
-    border-color: var(--lf-line);
+.scrim {
+    background-color: var(--scrim);
 }
 
-.title {
-    font-size: 56px;
+/* Tombul kart: tüm modal ekranların temel yüzeyi */
+.sheet {
+    background-color: var(--cream);
+    border-width: 3px;
+    border-bottom-width: 8px;
+    border-color: var(--ink);
+    border-radius: 22px;
+}
+
+.rule {
+    height: 2px;
+    border-radius: 1px;
+    background-color: var(--cream-3);
+}
+
+/* Başlık etiketi: kartın üst kenarına yapışmış, hafif eğik renkli şerit */
+.sticker {
+    position: absolute;
+    top: -28px;
+    left: 32px;
+    padding: 6px 22px 8px 22px;
+    border-width: 3px;
+    border-bottom-width: 6px;
+    border-color: var(--ink);
+    border-radius: 14px;
+    rotate: -2deg;
+    background-color: var(--leaf);
+}
+
+.sticker > Label {
+    font-size: 26px;
     -unity-font-style: bold;
-    color: var(--lf-ink);
-    -unity-text-align: middle-center;
+    color: var(--cream);
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: var(--ink);
+    text-shadow: 0 2px 0 rgba(59, 42, 31, 0.9);
 }
 
-.title.small-title {
-    font-size: 38px;
-    margin-bottom: 16px;
+.sticker.wood { background-color: var(--wood); }
+.sticker.sky { background-color: var(--sky); }
+.sticker.sun { background-color: var(--sun); }
+.sticker.tomato { background-color: var(--tomato); }
+
+/* ---------------------------------------------------------------- tipografi */
+
+.t-caption {
+    font-size: 12px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    color: var(--muted);
 }
 
-.subtitle {
-    font-size: 18px;
-    color: var(--lf-muted);
-    -unity-text-align: middle-center;
-    margin-bottom: 28px;
+.t-body {
+    font-size: 16px;
+    color: var(--ink);
+    white-space: normal;
+}
+
+.t-help {
+    font-size: 14px;
+    color: var(--ink-soft);
+    white-space: normal;
+}
+
+.t-title {
+    font-size: 28px;
+    -unity-font-style: bold;
+    color: var(--ink);
+}
+
+.t-subtitle {
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin-top: 4px;
 }
 
 .section-title {
-    font-size: 14px;
+    font-size: 12px;
     -unity-font-style: bold;
-    color: var(--lf-muted);
-    margin: 14px 0 4px 2px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin: 18px 0 8px 4px;
 }
 
 .body-text {
-    font-size: 18px;
-    color: var(--lf-ink);
+    font-size: 16px;
+    color: var(--ink);
     white-space: normal;
-    -unity-text-align: middle-center;
-    margin: 12px 0;
+    margin: 4px 0 16px 0;
 }
 
 .panel {
@@ -79,30 +153,39 @@
 
 .divider {
     height: 2px;
-    background-color: var(--lf-line);
-    margin: 14px 0 2px 0;
+    background-color: var(--cream-3);
+    margin: 16px 0 0 0;
 }
 
-/* ---------- Butonlar ---------- */
+/* ---------------------------------------------------------------- butonlar
+   Basılabilir: alt dudak + hover'da hafif kalkma, basınca çökme */
+
 .lf-button {
-    height: 52px;
-    margin: 6px 0;
-    font-size: 20px;
+    height: 50px;
+    margin: 0 0 10px 0;
+    padding: 0 18px;
+    font-size: 17px;
     -unity-font-style: bold;
-    border-radius: 12px;
-    border-width: 0;
-    background-color: var(--lf-neutral);
-    color: var(--lf-ink);
+    -unity-text-align: middle-center;
+    border-width: 2px;
+    border-bottom-width: 5px;
+    border-color: var(--ink);
+    border-radius: 14px;
+    background-color: var(--cream);
+    color: var(--ink);
+    transition-property: translate, background-color, border-bottom-width, rotate;
     transition-duration: 0.12s;
+    transition-timing-function: ease-out-back;
 }
 
 .lf-button:hover {
-    background-color: var(--lf-neutral-hover);
-    scale: 1.02 1.02;
+    translate: 0 -2px;
+    background-color: #FFFBF2;
 }
 
 .lf-button:active {
-    scale: 0.98 0.98;
+    translate: 0 2px;
+    border-bottom-width: 2px;
 }
 
 .lf-button:disabled {
@@ -110,347 +193,133 @@
 }
 
 .lf-button.primary {
-    background-color: var(--lf-accent);
-    color: var(--lf-accent-ink);
+    background-color: var(--leaf);
+    color: var(--cream);
 }
 
 .lf-button.primary:hover {
-    background-color: var(--lf-accent-hover);
+    background-color: #86BD55;
 }
 
 .lf-button.danger {
-    background-color: var(--lf-danger);
-    color: var(--lf-accent-ink);
+    background-color: var(--tomato);
+    color: var(--cream);
 }
 
 .lf-button.danger:hover {
-    background-color: var(--lf-danger-hover);
+    background-color: #EC7859;
 }
 
 .lf-button.subtle {
+    height: 40px;
     background-color: rgba(0, 0, 0, 0);
-    color: var(--lf-muted);
+    border-color: rgba(0, 0, 0, 0);
+    border-bottom-width: 2px;
+    color: var(--ink-soft);
+    font-size: 15px;
 }
 
 .lf-button.subtle:hover {
-    background-color: var(--lf-card-2);
+    color: var(--ink);
+    background-color: var(--cream-2);
+    translate: 0 0;
 }
 
-/* ---------- Metin alanları ---------- */
+.lf-button.row {
+    -unity-text-align: middle-left;
+}
+
+/* ---------------------------------------------------------------- metin alanları */
+
 .lf-field {
-    margin: 4px 0;
+    flex-direction: column;
+    margin: 0 0 12px 0;
 }
 
 .lf-field > Label {
-    min-width: 70px;
-    font-size: 16px;
-    color: var(--lf-ink);
+    min-width: 0;
+    font-size: 12px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    color: var(--ink-soft);
+    margin: 0 0 6px 4px;
+    padding: 0;
     -unity-text-align: middle-left;
 }
 
 .lf-field #unity-text-input {
-    height: 38px;
-    font-size: 18px;
-    border-radius: 8px;
-    border-color: var(--lf-line);
-    background-color: #FFFDF6;
-    color: var(--lf-ink);
-    padding-left: 10px;
+    height: 44px;
+    margin: 0;
+    padding: 0 14px;
+    font-size: 16px;
+    border-width: 2px;
+    border-radius: 12px;
+    border-color: var(--ink);
+    background-color: #FFFDF7;
+    color: var(--ink);
 }
 
-/* ---------- Durum ---------- */
+.lf-field:focus #unity-text-input {
+    border-color: var(--leaf-lip);
+    background-color: #FFFFFF;
+}
+
+/* ---------------------------------------------------------------- durum */
+
 .status {
-    margin-top: 14px;
-    font-size: 15px;
-    color: var(--lf-muted);
+    margin-top: 12px;
+    padding: 8px 14px;
+    font-size: 14px;
+    color: var(--ink);
     white-space: normal;
-    -unity-text-align: middle-center;
+    background-color: var(--cream);
+    border-width: 2px;
+    border-color: var(--ink);
+    border-radius: 12px;
 }
 
 .status.error {
-    color: var(--lf-danger);
+    background-color: #FCE1D8;
+    border-color: var(--tomato-lip);
+    color: var(--tomato-lip);
 }
 
-.version {
-    position: absolute;
-    right: 16px;
-    bottom: 12px;
-    font-size: 13px;
-    color: rgba(244, 235, 217, 0.5);
+/* ---------------------------------------------------------------- kaydırma çubuğu */
+
+.unity-scroll-view .unity-scroller__low-button,
+.unity-scroll-view .unity-scroller__high-button {
+    display: none;
 }
 
-/* ---------- Ana menü ---------- */
-/* Arka planda 3D diorama var; kart sola hizalı ve yarı saydam bir gölge üzerinde. */
-.main-menu {
+.unity-scroll-view .unity-scroller--vertical {
+    width: 12px;
+    margin-left: 10px;
+    border-width: 0;
     background-color: rgba(0, 0, 0, 0);
-    align-items: flex-start;
-    padding-left: 110px;
 }
 
-.menu-shade {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 720px;
-    background-color: rgba(24, 30, 20, 0.35);
+.unity-scroll-view .unity-scroller--vertical > .unity-slider {
+    margin: 0;
 }
 
-.main-menu .menu-card {
-    background-color: rgba(244, 235, 217, 0.95);
-}
-
-/* ---------- Oyun menüsü ---------- */
-.pause-overlay {
-    background-color: rgba(20, 26, 18, 0.6);
-}
-
-.pause-card {
-    width: 420px;
-}
-
-.info-box {
-    background-color: var(--lf-card-2);
-    border-radius: 10px;
-    padding: 12px 14px;
-    margin-bottom: 14px;
-}
-
-.info-mode {
-    font-size: 18px;
-    -unity-font-style: bold;
-    color: var(--lf-ink);
-}
-
-.info-text {
-    font-size: 15px;
-    color: var(--lf-muted);
-    white-space: normal;
-    margin-top: 4px;
-}
-
-/* ---------- HUD: basılı tutma halkası ---------- */
-.hud-hold-ring {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 58px;
-    height: 58px;
-    margin-left: -29px;
-    margin-top: -29px;
-}
-
-/* ---------- HUD: seviye / XP ---------- */
-.hud-level {
-    position: absolute;
-    top: 22px;
-    left: 24px;
-    flex-direction: row;
-    align-items: center;
-    padding: 8px 14px 8px 8px;
-    border-radius: 30px;
-    background-color: rgba(30, 36, 26, 0.72);
-}
-
-.hud-level-badge {
-    width: 46px;
-    height: 46px;
-    border-radius: 23px;
-    align-items: center;
-    justify-content: center;
-    background-color: rgb(94, 140, 74);
-    border-width: 3px;
-    border-color: rgb(141, 186, 109);
-    margin-right: 10px;
-}
-
-.hud-level-value {
-    font-size: 22px;
-    -unity-font-style: bold;
-    color: rgb(255, 253, 246);
-}
-
-.hud-level-info {
-    width: 170px;
-}
-
-.hud-xp-label {
-    font-size: 13px;
-    -unity-font-style: bold;
-    color: rgb(255, 253, 246);
-    margin-bottom: 4px;
-}
-
-.hud-xp-track {
-    height: 8px;
-    border-radius: 4px;
-    background-color: rgba(255, 255, 255, 0.18);
-    overflow: hidden;
-}
-
-.hud-xp-fill {
-    height: 100%;
-    width: 0%;
-    border-radius: 4px;
-    background-color: rgb(240, 190, 60);
-    transition-property: width;
-    transition-duration: 0.35s;
-}
-
-.hud-points {
-    margin-left: 12px;
-    padding: 4px 10px;
-    border-radius: 10px;
-    font-size: 13px;
-    -unity-font-style: bold;
-    color: rgb(59, 47, 37);
-    background-color: rgb(255, 215, 110);
-}
-
-.hud-xp-popup {
-    position: absolute;
-    left: 52%;
-    top: 46%;
-    font-size: 20px;
-    -unity-font-style: bold;
-    color: rgb(255, 215, 110);
-    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
-    transition-property: opacity, translate;
-    transition-duration: 0.25s;
-}
-
-.hud-xp-popup.fade {
-    opacity: 0;
-    translate: 0 -18px;
-}
-
-.hud-levelup {
-    position: absolute;
-    top: 20%;
-    left: 0;
-    right: 0;
-    align-items: center;
-    transition-property: opacity, scale;
-    transition-duration: 0.3s;
-}
-
-.hud-levelup.fade {
-    opacity: 0;
-    scale: 0.9 0.9;
-}
-
-.hud-levelup-title {
-    font-size: 54px;
-    -unity-font-style: bold;
-    color: rgb(255, 215, 110);
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.75);
-    letter-spacing: 3px;
-}
-
-.hud-levelup-sub {
-    font-size: 20px;
-    -unity-font-style: bold;
-    color: rgb(255, 253, 246);
-    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
-}
-
-/* ---------- HUD ---------- */
-.hud-prompt {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 56%;
-    -unity-text-align: middle-center;
-    font-size: 20px;
-    -unity-font-style: bold;
-    color: rgb(255, 253, 246);
-    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
-}
-
-.hud-money {
-    position: absolute;
-    top: 24px;
-    right: 24px;
-    flex-direction: row;
-    align-items: center;
-    padding: 8px 16px 8px 10px;
-    border-radius: 22px;
-    background-color: rgba(244, 235, 217, 0.92);
-    border-width: 2px;
-    border-color: var(--lf-line);
-    transition-duration: 0.2s;
-}
-
-.hud-money.pulse {
-    scale: 1.12 1.12;
-    background-color: rgb(255, 240, 190);
-}
-
-.hud-coin {
-    width: 22px;
-    height: 22px;
-    border-radius: 11px;
-    margin-right: 8px;
-    background-color: rgb(240, 190, 60);
-    border-width: 2px;
-    border-color: rgb(196, 140, 30);
-}
-
-.hud-money-value {
-    font-size: 22px;
-    -unity-font-style: bold;
-    color: var(--lf-ink);
-}
-
-.hud-carry {
-    position: absolute;
-    right: 24px;
-    bottom: 24px;
-    min-width: 200px;
-    padding: 10px 14px;
-    border-radius: 12px;
-    background-color: rgba(30, 36, 26, 0.72);
-}
-
-.hud-carry-title {
-    font-size: 14px;
-    -unity-font-style: bold;
-    color: rgb(240, 200, 110);
-    margin-bottom: 4px;
-}
-
-.hud-carry-list {
-    font-size: 16px;
-    color: rgb(255, 253, 246);
-    white-space: normal;
-}
-
-.hud-toast {
-    position: absolute;
-    top: 90px;
-    left: 0;
-    right: 0;
-    -unity-text-align: middle-center;
-    font-size: 20px;
-    -unity-font-style: bold;
-    color: rgb(255, 253, 246);
-    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.85);
-}
-
-.hud-hint {
-    position: absolute;
-    left: 24px;
-    bottom: 20px;
-    font-size: 15px;
-    color: rgba(255, 255, 255, 0.9);
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
-}
-
-.crosshair {
+.unity-scroll-view .unity-scroller--vertical .unity-base-slider__tracker {
+    left: 3px;
     width: 6px;
-    height: 6px;
+    border-width: 0;
     border-radius: 3px;
-    background-color: rgba(255, 255, 255, 0.9);
-    border-width: 1px;
-    border-color: rgba(0, 0, 0, 0.45);
+    background-color: var(--cream-2);
+}
+
+.unity-scroll-view .unity-scroller--vertical .unity-base-slider__dragger {
+    left: 1px;
+    width: 10px;
+    margin: 0;
+    border-width: 2px;
+    border-color: var(--ink);
+    border-radius: 5px;
+    background-color: var(--sun);
+}
+
+.unity-scroll-view .unity-scroller--vertical .unity-base-slider__dragger-border {
+    display: none;
 }

@@ -90,6 +90,7 @@ namespace LandFlipper.EditorTools
             public float ClearRadius;
             public bool IncludeShack;
             public bool IncludeSellStation;
+            public bool IncludeWorkbench;
             public string PriceBoardText;
         }
 
@@ -119,6 +120,8 @@ namespace LandFlipper.EditorTools
             Vector3 stationPos = new Vector3(6.5f, 0f, -h + 4.5f);
             if (s.IncludeShack) placer.Reserve(shackPos, 4f, 3f);
             if (s.IncludeSellStation) placer.Reserve(stationPos, 5f, 3.5f);
+            Vector3 benchPos = new Vector3(-6.5f, 0f, -h + 4.5f); // girişin solunda, satış tezgâhının karşısında
+            if (s.IncludeWorkbench) placer.Reserve(benchPos, 4.5f, 3.5f);
 
             var staticGroup = Group("Static", root.transform);
             BuildFence(staticGroup, h);
@@ -186,6 +189,7 @@ namespace LandFlipper.EditorTools
             }
 
             if (s.IncludeSellStation) BuildSellStation(root.transform, stationPos, s.PriceBoardText);
+            if (s.IncludeWorkbench) BuildWorkbench(root.transform, benchPos);
 
             foreach (var t in staticGroup.GetComponentsInChildren<Transform>(true))
                 GameObjectUtility.SetStaticEditorFlags(t.gameObject, StaticEditorFlags.BatchingStatic | StaticEditorFlags.ContributeGI);
@@ -504,6 +508,170 @@ namespace LandFlipper.EditorTools
                     GameObjectUtility.SetStaticEditorFlags(tr.gameObject, StaticEditorFlags.BatchingStatic | StaticEditorFlags.ContributeGI);
         }
 
+        /// <summary>Ana menü dioraması için "SATILIK" tabelası (oyunun konusu: arazi al, düzelt, sat).</summary>
+        public static void BuildForSaleSign(Transform parent, Vector3 p, float yaw)
+        {
+            var sign = new GameObject("ForSaleSign");
+            sign.transform.SetParent(parent, false);
+            sign.transform.localPosition = Ground(p);
+            sign.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+            var t = sign.transform;
+            var b = kit.Box;
+
+            GameObject Part(string n, Vector3 pos, Vector3 size, Vector3 euler, params Material[] mats)
+            {
+                var go = MeshObject(n, t, b, mats);
+                go.transform.localPosition = pos;
+                go.transform.localScale = size;
+                go.transform.localRotation = Quaternion.Euler(euler);
+                return go;
+            }
+
+            Part("Post", new Vector3(0f, 0.8f, 0f), new Vector3(0.11f, 1.6f, 0.11f), new Vector3(0f, 0f, 2f), kit.WoodDark);
+            Part("Arm", new Vector3(0.38f, 1.52f, 0f), new Vector3(0.86f, 0.08f, 0.08f), Vector3.zero, kit.WoodDark);
+            var board = new GameObject("Board");
+            board.transform.SetParent(t, false);
+            board.transform.localPosition = new Vector3(0.45f, 1.2f, 0f);
+            board.transform.localRotation = Quaternion.Euler(0f, 0f, -3f);
+            var bp = MeshObject("Panel", board.transform, b, kit.AwningRed);
+            bp.transform.localScale = new Vector3(0.82f, 0.46f, 0.05f);
+            var trim = MeshObject("Trim", board.transform, b, kit.AwningCream);
+            trim.transform.localPosition = new Vector3(0f, 0f, 0.012f);
+            trim.transform.localScale = new Vector3(0.9f, 0.54f, 0.04f);
+            Label(board.transform, "SATILIK", new Vector3(0f, 0f, -0.035f), 0.02f, new Color(1f, 0.97f, 0.9f));
+            foreach (var x in new[] { 0.15f, 0.75f })
+                Part("Chain", new Vector3(x, 1.4f, 0f), new Vector3(0.02f, 0.16f, 0.02f), Vector3.zero, kit.RockDark);
+        }
+
+        /// <summary>Kütük ve balya yığını (dekor).</summary>
+        public static void BuildPropPile(Transform parent, Vector3 p, float yaw)
+        {
+            var pile = new GameObject("PropPile");
+            pile.transform.SetParent(parent, false);
+            pile.transform.localPosition = Ground(p);
+            pile.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+            var t = pile.transform;
+
+            for (int i = 0; i < 3; i++)
+            {
+                var log = MeshObject("Log", t, kit.Log, kit.Bark, kit.WoodCut);
+                log.transform.localPosition = new Vector3(0f, 0.17f, -0.36f + i * 0.36f);
+                log.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+            }
+            for (int i = 0; i < 2; i++)
+            {
+                var log = MeshObject("Log", t, kit.Log, kit.Bark, kit.WoodCut);
+                log.transform.localPosition = new Vector3(0.04f, 0.47f, -0.18f + i * 0.36f);
+                log.transform.localRotation = Quaternion.Euler(0f, 87f + i * 6f, 0f);
+            }
+            for (int i = 0; i < 3; i++)
+            {
+                var bale = MeshObject("Bale", t, kit.Bale, kit.Straw, kit.Twine);
+                bale.transform.localPosition = new Vector3(1.0f + (i == 2 ? 0.25f : 0f), 0.15f + (i == 2 ? 0.3f : 0f), -0.3f + (i == 2 ? 0.25f : i * 0.55f));
+                bale.transform.localRotation = Quaternion.Euler(0f, 10f + i * 25f, 0f);
+                bale.transform.localScale = Vector3.one * 1.6f;
+            }
+        }
+
+        static void BuildWorkbench(Transform parent, Vector3 p)
+        {
+            var bench = new GameObject("Workbench");
+            bench.transform.SetParent(parent, false);
+            bench.transform.localPosition = Ground(p);
+            bench.transform.localRotation = Quaternion.Euler(0f, -90f, 0f); // ön yüz (-Z) arazinin ortasına bakar
+            var t = bench.transform;
+
+            GameObject Part(string n, Transform parentT, Mesh mesh, Vector3 pos, Vector3 size, Vector3 euler, bool collide, params Material[] mats)
+            {
+                var go = MeshObject(n, parentT, mesh, mats);
+                go.transform.localPosition = pos;
+                go.transform.localScale = size;
+                go.transform.localRotation = Quaternion.Euler(euler);
+                if (collide) go.AddComponent<BoxCollider>();
+                return go;
+            }
+
+            var b = kit.Box;
+            Part("Platform", t, b, new Vector3(0f, 0.07f, 0.2f), new Vector3(3.6f, 0.14f, 2.7f), Vector3.zero, true, kit.WoodDark);
+
+            // çalışma masası
+            Part("TableTop", t, b, new Vector3(-0.3f, 0.98f, 0.15f), new Vector3(2.4f, 0.12f, 0.95f), Vector3.zero, true, kit.Wood);
+            Part("TableShelf", t, b, new Vector3(-0.3f, 0.38f, 0.2f), new Vector3(2.2f, 0.07f, 0.8f), Vector3.zero, false, kit.WoodDark);
+            foreach (var x in new[] { -1.4f, 0.8f })
+            foreach (var z in new[] { -0.25f, 0.55f })
+                Part("Leg", t, b, new Vector3(x, 0.52f, z), new Vector3(0.12f, 0.92f, 0.12f), Vector3.zero, false, kit.WoodDark);
+
+            // masa üstü: mengene ve tahta parçaları
+            Part("Vise", t, b, new Vector3(-1.2f, 1.13f, -0.1f), new Vector3(0.22f, 0.18f, 0.26f), Vector3.zero, false, kit.RockDark);
+            Part("ViseJaw", t, b, new Vector3(-1.2f, 1.25f, -0.24f), new Vector3(0.26f, 0.08f, 0.05f), Vector3.zero, false, kit.RockDark);
+            Part("Plank", t, b, new Vector3(-0.2f, 1.07f, 0.25f), new Vector3(0.9f, 0.05f, 0.22f), new Vector3(0f, 12f, 0f), false, kit.WoodCut);
+
+            // arka pano: asılı alet siluetleri
+            Part("PegPostL", t, b, new Vector3(-1.55f, 1.3f, 0.75f), new Vector3(0.12f, 2.6f, 0.12f), Vector3.zero, true, kit.WoodDark);
+            Part("PegPostR", t, b, new Vector3(0.95f, 1.3f, 0.75f), new Vector3(0.12f, 2.6f, 0.12f), Vector3.zero, true, kit.WoodDark);
+            Part("PegBoard", t, b, new Vector3(-0.3f, 1.75f, 0.76f), new Vector3(2.45f, 1.25f, 0.06f), Vector3.zero, false, kit.Sign);
+            // balta
+            Part("AxeHandle", t, b, new Vector3(-1.05f, 1.75f, 0.71f), new Vector3(0.06f, 0.85f, 0.03f), new Vector3(0f, 0f, 8f), false, kit.Wood);
+            Part("AxeHead", t, b, new Vector3(-0.98f, 2.1f, 0.7f), new Vector3(0.28f, 0.16f, 0.03f), new Vector3(0f, 0f, 8f), false, kit.RockDark);
+            // çekiç
+            Part("HammerHandle", t, b, new Vector3(-0.35f, 1.7f, 0.71f), new Vector3(0.05f, 0.7f, 0.03f), Vector3.zero, false, kit.Wood);
+            Part("HammerHead", t, b, new Vector3(-0.35f, 2.04f, 0.7f), new Vector3(0.26f, 0.12f, 0.04f), Vector3.zero, false, kit.RockDark);
+            // makas
+            Part("ShearBladeA", t, b, new Vector3(0.38f, 1.85f, 0.71f), new Vector3(0.04f, 0.45f, 0.02f), new Vector3(0f, 0f, 14f), false, kit.Rock);
+            Part("ShearBladeB", t, b, new Vector3(0.48f, 1.85f, 0.71f), new Vector3(0.04f, 0.45f, 0.02f), new Vector3(0f, 0f, -14f), false, kit.Rock);
+            Part("ShearHandles", t, b, new Vector3(0.43f, 1.52f, 0.7f), new Vector3(0.22f, 0.12f, 0.04f), Vector3.zero, false, kit.AwningRed);
+
+            // çatı
+            var roof = new GameObject("Roof");
+            roof.transform.SetParent(t, false);
+            roof.transform.localPosition = new Vector3(-0.3f, 2.72f, 0.3f);
+            roof.transform.localRotation = Quaternion.Euler(-16f, 0f, 0f);
+            for (int i = 0; i < 6; i++)
+                Part("RoofPlank", roof.transform, b, new Vector3(0f, 0f, -1.0f + i * 0.4f), new Vector3(2.9f, 0.07f, 0.42f),
+                    new Vector3(Range(-2f, 2f), 0f, 0f), false, i % 2 == 0 ? kit.Roof : kit.WoodDark);
+            Part("FrontPostL", t, b, new Vector3(-1.55f, 1.2f, -0.65f), new Vector3(0.12f, 2.4f, 0.12f), Vector3.zero, true, kit.WoodDark);
+            Part("FrontPostR", t, b, new Vector3(0.95f, 1.2f, -0.65f), new Vector3(0.12f, 2.4f, 0.12f), Vector3.zero, true, kit.WoodDark);
+
+            // tabela
+            var sign = new GameObject("Sign");
+            sign.transform.SetParent(t, false);
+            sign.transform.localPosition = new Vector3(-0.3f, 2.62f, -0.95f);
+            Part("Board", sign.transform, b, Vector3.zero, new Vector3(1.9f, 0.5f, 0.08f), Vector3.zero, false, kit.Sign);
+            Part("Frame", sign.transform, b, new Vector3(0f, 0f, 0.02f), new Vector3(2.0f, 0.6f, 0.06f), Vector3.zero, false, kit.WoodDark);
+            Label(sign.transform, "ALETLER", new Vector3(0f, 0f, -0.05f), 0.026f, new Color(0.33f, 0.2f, 0.12f));
+
+            // kütük üstünde örs (yükseltme olunca zıplar)
+            Part("AnvilStump", t, kit.Disc, new Vector3(1.55f, 0.14f, -0.35f), new Vector3(0.42f, 0.55f, 0.42f), Vector3.zero, true, kit.Bark);
+            var anvil = new GameObject("Anvil");
+            anvil.transform.SetParent(t, false);
+            anvil.transform.localPosition = new Vector3(1.55f, 0.69f, -0.35f);
+            Part("AnvilBase", anvil.transform, b, new Vector3(0f, 0.06f, 0f), new Vector3(0.24f, 0.12f, 0.3f), Vector3.zero, false, kit.RockDark);
+            Part("AnvilNeck", anvil.transform, b, new Vector3(0f, 0.17f, 0f), new Vector3(0.14f, 0.12f, 0.18f), Vector3.zero, false, kit.RockDark);
+            Part("AnvilTop", anvil.transform, b, new Vector3(0f, 0.27f, 0f), new Vector3(0.24f, 0.09f, 0.5f), Vector3.zero, false, kit.RockDark);
+            Part("AnvilHorn", anvil.transform, b, new Vector3(0f, 0.27f, -0.32f), new Vector3(0.12f, 0.07f, 0.16f), new Vector3(10f, 0f, 0f), false, kit.RockDark);
+
+            // yanında odun yığını
+            for (int i = 0; i < 3; i++)
+            {
+                var log = MeshObject("Log", t, kit.Log, kit.Bark, kit.WoodCut);
+                log.transform.localPosition = new Vector3(-2.1f, 0.25f + (i == 2 ? 0.3f : 0f), -0.1f + (i == 2 ? 0.17f : i * 0.34f));
+                log.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+                log.transform.localScale = Vector3.one * 0.8f;
+            }
+
+            // Tezgâhın herhangi bir yerine bakınca ipucu çıksın.
+            var targetArea = bench.AddComponent<BoxCollider>();
+            targetArea.isTrigger = true;
+            targetArea.center = new Vector3(-0.1f, 1.3f, 0f);
+            targetArea.size = new Vector3(3.8f, 2.6f, 2.0f);
+
+            bench.AddComponent<Workbench>().EditorSetup(anvil.transform);
+
+            foreach (var tr in bench.GetComponentsInChildren<Transform>(true))
+                if (!tr.IsChildOf(anvil.transform))
+                    GameObjectUtility.SetStaticEditorFlags(tr.gameObject, StaticEditorFlags.BatchingStatic | StaticEditorFlags.ContributeGI);
+        }
+
         static void Label(Transform parent, string text, Vector3 localPos, float size, Color color)
         {
             var go = new GameObject("Text");
@@ -611,7 +779,7 @@ namespace LandFlipper.EditorTools
             return mesh;
         }
 
-        static Material Mat(string name, float r, float g, float b, float smoothness = 0.08f)
+        public static Material Mat(string name, float r, float g, float b, float smoothness = 0.08f)
         {
             string path = $"{MaterialFolder}/{name}.mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);

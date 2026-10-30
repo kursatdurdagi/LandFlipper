@@ -174,10 +174,10 @@ namespace LandFlipper.UI
             }
             content.scrollOffset = Vector2.zero;
 
-            resetButton.text = tab == Tab.Keys ? "Tuşları Sıfırla" : "Varsayılana Döndür";
+            resetButton.text = tab == Tab.Keys ? "Tuşları sıfırla" : "Varsayılana döndür";
             SetHint(tab == Tab.Keys
-                ? "Değiştirmek için bir tuşa tıkla, sonra yeni tuşa bas. Esc iptal eder."
-                : "Değişiklikler anında uygulanır ve kaydedilir.");
+                ? "Tuşa tıkla, yenisine bas · Esc iptal"
+                : string.Empty);
         }
 
         void BuildDisplay()

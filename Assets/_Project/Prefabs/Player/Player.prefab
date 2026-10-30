@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 4015699548477739692}
   - component: {fileID: 769870997128829982}
   - component: {fileID: 768026862839016003}
+  - component: {fileID: 3240135986255123513}
   - component: {fileID: 1078815309258171699}
   m_Layer: 8
   m_Name: Player
@@ -188,6 +189,32 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
+--- !u!114 &3240135986255123513
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1342520374270691039}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ffef2dccc9e82c84d9c16223ef3cac34, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LandFlipper.Player.Tools.PlayerTools
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  bodyAnimator: {fileID: 6125846255992193128}
+  firstPersonArms: {fileID: 5211072036901077845}
+  cameraPivot: {fileID: 7151278056966176412}
+  idleHideDelay: 1.8
+  equipSpeed: 6
+  snipInterval: 0.28
+  fingerCurlAxis: {x: 1, y: 0, z: 0}
+  fingerCurl: 62
+  thumbCurlAxis: {x: 0, y: 0, z: 1}
+  thumbCurl: 25
+  firstPersonOffset: {x: -0.04, y: 0.27, z: 0.12}
 --- !u!114 &1078815309258171699
 MonoBehaviour:
   m_ObjectHideFlags: 0

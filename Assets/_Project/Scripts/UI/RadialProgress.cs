@@ -11,10 +11,11 @@ namespace LandFlipper.UI
     {
         float progress;
 
+        // Tasarım sistemi: antrasit iz, krem dolgu, bitince soluk orman yeşili
         public float LineWidth { get; set; } = 6f;
-        public Color TrackColor { get; set; } = new Color(0f, 0f, 0f, 0.35f);
-        public Color FillColor { get; set; } = new Color(0.94f, 0.75f, 0.24f, 1f);
-        public Color CompleteColor { get; set; } = new Color(0.55f, 0.82f, 0.42f, 1f);
+        public Color TrackColor { get; set; } = new Color(0.23f, 0.165f, 0.12f, 0.55f);
+        public Color FillColor { get; set; } = new Color(1f, 0.965f, 0.894f, 1f);
+        public Color CompleteColor { get; set; } = new Color(0.475f, 0.69f, 0.29f, 1f);
 
         public float Progress
         {

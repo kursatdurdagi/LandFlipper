@@ -1,70 +1,50 @@
-/* Land Flipper - Ayarlar ekranı (UI Toolkit) */
-
-.settings-overlay {
-    background-color: rgba(18, 24, 16, 0.75);
-}
+/* Land Flipper — Ayarlar: mavi etiket, tombul sekmeler, yuvarlak satırlar */
 
 .settings-panel {
-    width: 1040px;
+    width: 940px;
     max-width: 94%;
-    height: 760px;
-    max-height: 92%;
-    padding: 28px 32px 22px 32px;
-    border-radius: 22px;
-    background-color: rgb(244, 235, 217);
-    border-width: 3px;
-    border-color: rgb(217, 203, 176);
+    height: 640px;
+    max-height: 90%;
+    padding: 54px 30px 18px 30px;
 }
 
-/* ---------- başlık + sekmeler ---------- */
-.settings-header {
-    flex-direction: row;
-    align-items: center;
-    padding-bottom: 18px;
-    margin-bottom: 14px;
-    border-bottom-width: 2px;
-    border-color: rgb(217, 203, 176);
-}
-
-.settings-title {
-    font-size: 36px;
-    -unity-font-style: bold;
-    color: rgb(59, 47, 37);
-    letter-spacing: 2px;
-    flex-grow: 1;
-}
+/* ---------------------------------------------------------------- sekmeler */
 
 .settings-tabs {
     flex-direction: row;
-    padding: 5px;
-    border-radius: 14px;
-    background-color: rgb(232, 220, 195);
+    margin: 0 0 16px 0;
 }
 
 .settings-tab {
-    height: 40px;
-    min-width: 120px;
-    margin: 0 2px;
+    height: 42px;
+    margin: 0 8px 0 0;
+    padding: 0 20px;
     font-size: 16px;
     -unity-font-style: bold;
-    border-radius: 10px;
-    border-width: 0;
-    background-color: rgba(0, 0, 0, 0);
-    color: rgb(122, 106, 88);
+    color: var(--ink-soft);
+    background-color: var(--cream-2);
+    border-width: 2px;
+    border-bottom-width: 4px;
+    border-color: var(--ink);
+    border-radius: 14px;
+    transition-property: translate, background-color;
     transition-duration: 0.12s;
+    transition-timing-function: ease-out-back;
 }
 
 .settings-tab:hover {
-    background-color: rgb(244, 235, 217);
-    color: rgb(59, 47, 37);
+    translate: 0 -2px;
+    color: var(--ink);
 }
 
 .settings-tab.active {
-    background-color: rgb(94, 140, 74);
-    color: rgb(255, 253, 246);
+    background-color: var(--sky);
+    color: var(--cream);
+    translate: 0 -2px;
 }
 
-/* ---------- içerik ---------- */
+/* ---------------------------------------------------------------- içerik */
+
 .settings-content {
     flex-grow: 1;
 }
@@ -72,34 +52,37 @@
 .settings-section {
     font-size: 13px;
     -unity-font-style: bold;
-    color: rgb(150, 132, 110);
     letter-spacing: 1px;
-    margin: 16px 4px 6px 4px;
+    color: var(--muted);
+    margin: 14px 0 6px 6px;
 }
 
 .settings-row {
     flex-direction: row;
     align-items: center;
     min-height: 54px;
-    padding: 6px 16px;
-    margin: 3px 0;
-    border-radius: 12px;
-    background-color: rgb(250, 244, 231);
+    padding: 6px 14px 6px 18px;
+    margin: 0 0 6px 0;
+    background-color: #FFFDF7;
+    border-width: 2px;
+    border-color: var(--cream-3);
+    border-radius: 16px;
 }
 
 .settings-row:hover {
-    background-color: rgb(255, 250, 240);
+    border-color: var(--ink);
 }
 
 .settings-row-label {
-    width: 300px;
-    font-size: 17px;
-    color: rgb(59, 47, 37);
+    width: 250px;
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: var(--ink);
 }
 
 .settings-row-sub {
     font-size: 13px;
-    color: rgb(150, 132, 110);
+    color: var(--ink-soft);
     white-space: normal;
 }
 
@@ -111,61 +94,71 @@
 }
 
 .settings-value {
-    width: 70px;
-    font-size: 16px;
+    width: 62px;
+    font-size: 15px;
     -unity-font-style: bold;
-    color: rgb(94, 140, 74);
+    color: var(--ink);
     -unity-text-align: middle-right;
 }
 
-/* ---------- slider ---------- */
+/* ---- kaydırıcı: kalın konturlu iz, güneş rengi topuz */
 .lf-slider {
     flex-grow: 1;
-    max-width: 420px;
-    margin: 0 10px;
+    max-width: 340px;
+    margin: 0 10px 0 0;
 }
 
 .lf-slider #unity-tracker {
-    height: 8px;
-    margin-top: -4px;
-    border-radius: 4px;
-    border-width: 0;
-    background-color: rgb(225, 212, 186);
+    height: 10px;
+    margin-top: -5px;
+    border-width: 2px;
+    border-color: var(--ink);
+    border-radius: 5px;
+    background-color: var(--cream-2);
 }
 
 .lf-slider #unity-dragger {
-    width: 20px;
-    height: 20px;
-    margin-top: -10px;
-    border-radius: 10px;
-    border-width: 3px;
-    border-color: rgb(255, 253, 246);
-    background-color: rgb(94, 140, 74);
+    width: 22px;
+    height: 22px;
+    margin-top: -11px;
+    border-radius: 11px;
+    border-width: 2px;
+    border-bottom-width: 4px;
+    border-color: var(--ink);
+    background-color: var(--sun);
 }
 
 .lf-slider #unity-dragger-border {
     display: none;
 }
 
-/* ---------- açma/kapama (pill) ---------- */
+/* ---- açık / kapalı */
 .lf-switch {
-    width: 120px;
+    width: 92px;
     height: 36px;
-    border-radius: 18px;
-    border-width: 0;
+    margin: 0;
     font-size: 14px;
     -unity-font-style: bold;
-    background-color: rgb(225, 212, 186);
-    color: rgb(122, 106, 88);
+    border-width: 2px;
+    border-bottom-width: 4px;
+    border-color: var(--ink);
+    border-radius: 18px;
+    background-color: var(--cream-2);
+    color: var(--muted);
+    transition-property: background-color, translate;
     transition-duration: 0.12s;
 }
 
-.lf-switch.on {
-    background-color: rgb(94, 140, 74);
-    color: rgb(255, 253, 246);
+.lf-switch:active {
+    translate: 0 2px;
 }
 
-/* ---------- seçici ( ‹ değer › ) ---------- */
+.lf-switch.on {
+    background-color: var(--leaf);
+    color: var(--cream);
+}
+
+/* ---- seçici ‹ değer › */
 .lf-stepper {
     flex-direction: row;
     align-items: center;
@@ -174,100 +167,123 @@
 .lf-stepper-arrow {
     width: 36px;
     height: 36px;
-    border-radius: 18px;
-    border-width: 0;
-    font-size: 18px;
+    margin: 0;
+    padding: 0;
+    font-size: 20px;
     -unity-font-style: bold;
-    background-color: rgb(232, 220, 195);
-    color: rgb(59, 47, 37);
-}
-
-.lf-stepper-arrow:hover {
-    background-color: rgb(217, 203, 176);
-}
-
-.lf-stepper-value {
-    width: 220px;
-    font-size: 16px;
-    -unity-font-style: bold;
-    color: rgb(59, 47, 37);
-    -unity-text-align: middle-center;
-}
-
-/* ---------- tuş atama ---------- */
-.key-button {
-    min-width: 150px;
-    height: 40px;
-    border-radius: 10px;
     border-width: 2px;
-    border-color: rgb(217, 203, 176);
-    font-size: 16px;
-    -unity-font-style: bold;
-    background-color: rgb(255, 253, 246);
-    color: rgb(59, 47, 37);
+    border-bottom-width: 4px;
+    border-color: var(--ink);
+    border-radius: 18px;
+    background-color: var(--cream);
+    color: var(--ink);
+    transition-property: translate;
     transition-duration: 0.1s;
 }
 
+.lf-stepper-arrow:hover {
+    background-color: var(--sun-soft);
+}
+
+.lf-stepper-arrow:active {
+    translate: 0 2px;
+}
+
+.lf-stepper-value {
+    width: 190px;
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: var(--ink);
+    -unity-text-align: middle-center;
+}
+
+/* ---- tuş atama: klavye tuşu */
+.key-button {
+    min-width: 80px;
+    height: 38px;
+    margin: 0;
+    padding: 0 14px;
+    font-size: 15px;
+    -unity-font-style: bold;
+    border-width: 2px;
+    border-bottom-width: 5px;
+    border-color: var(--ink);
+    border-radius: 10px;
+    background-color: var(--cream);
+    color: var(--ink);
+    transition-property: translate, border-bottom-width, background-color;
+    transition-duration: 0.08s;
+}
+
 .key-button:hover {
-    border-color: rgb(94, 140, 74);
+    background-color: var(--sun-soft);
+}
+
+.key-button:active {
+    translate: 0 3px;
+    border-bottom-width: 2px;
 }
 
 .key-button.listening {
-    border-color: rgb(240, 190, 60);
-    background-color: rgb(255, 240, 190);
-    color: rgb(150, 100, 20);
+    background-color: var(--sun);
+    rotate: -2deg;
 }
 
 .key-button.conflict {
-    border-color: rgb(181, 83, 60);
-    color: rgb(181, 83, 60);
+    background-color: #FCE1D8;
+    border-color: var(--tomato-lip);
+    color: var(--tomato-lip);
 }
 
 .key-reset {
-    width: 40px;
-    height: 40px;
-    margin-left: 8px;
-    border-radius: 10px;
-    border-width: 0;
-    font-size: 18px;
+    width: 36px;
+    height: 36px;
+    margin: 0 0 0 8px;
+    padding: 0;
+    font-size: 17px;
     -unity-font-style: bold;
-    background-color: rgb(232, 220, 195);
-    color: rgb(122, 106, 88);
+    border-width: 0;
+    border-radius: 18px;
+    background-color: rgba(0, 0, 0, 0);
+    color: var(--muted);
 }
 
 .key-reset:hover {
-    background-color: rgb(217, 203, 176);
-    color: rgb(59, 47, 37);
+    background-color: var(--cream-2);
+    color: var(--ink);
 }
 
 .key-conflict-label {
-    font-size: 13px;
+    padding: 2px 8px;
+    font-size: 12px;
     -unity-font-style: bold;
-    color: rgb(181, 83, 60);
-    margin-right: 12px;
+    color: var(--cream);
+    background-color: var(--tomato);
+    border-radius: 8px;
+    margin-right: 10px;
 }
 
-/* ---------- alt ---------- */
+/* ---------------------------------------------------------------- alt */
+
 .settings-footer {
     flex-direction: row;
     align-items: center;
-    justify-content: space-between;
     margin-top: 14px;
-    padding-top: 14px;
-    border-top-width: 2px;
-    border-color: rgb(217, 203, 176);
+}
+
+.settings-reset {
+    width: auto;
+    margin: 0;
 }
 
 .settings-hint {
-    font-size: 14px;
-    color: rgb(122, 106, 88);
-}
-
-.settings-footer-buttons {
-    flex-direction: row;
+    flex-grow: 1;
+    font-size: 13px;
+    color: var(--ink-soft);
+    -unity-text-align: middle-center;
 }
 
 .settings-footer-button {
-    min-width: 170px;
-    margin: 0 0 0 10px;
+    min-width: 140px;
+    margin: 0;
 }

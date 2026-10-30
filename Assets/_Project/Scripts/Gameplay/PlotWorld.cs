@@ -104,7 +104,7 @@ namespace LandFlipper.Gameplay
         // ------------------------------------------------------------ server
 
         [Server]
-        public bool ServerApplyHit(int id, Vector3 hitterPosition)
+        public bool ServerApplyHit(int id, Vector3 hitterPosition, int damage = 1)
         {
             if (!nodes.TryGetValue(id, out var node)) return false;
 
@@ -112,7 +112,8 @@ namespace LandFlipper.Gameplay
             if (state.depleted) return false;
 
             int hitsBefore = state.hitsTaken;
-            state.hitsTaken++;
+            // Daha iyi aletler vuruş başına daha çok hasar verir (Demir Balta = 2 ...).
+            state.hitsTaken = (byte)Mathf.Min(node.MaxHits, state.hitsTaken + Mathf.Max(1, damage));
             if (state.hitsTaken >= node.MaxHits)
             {
                 state.depleted = true;

@@ -16,6 +16,11 @@ namespace LandFlipper.UI
         TextField portField, addressField;
         Label statusLabel, busyLabel;
 
+        // canlı menü: logo düşüp sallanır, butonlar sırayla kayarak gelir
+        VisualElement logo;
+        IVisualElementScheduledItem logoJob;
+        float introStartTime;
+
         void OnEnable()
         {
             var root = GetComponent<UIDocument>().rootVisualElement;
@@ -50,6 +55,10 @@ namespace LandFlipper.UI
             InputGate.SetBlocked(false);
             Time.timeScale = 1f;
 
+            logo = root.Q("menu-logo");
+            introStartTime = Time.unscaledTime;
+            if (logo != null) logoJob = logo.schedule.Execute(AnimateLogo).Every(16);
+
             ShowPanel(mainPanel);
             SetStatus(null);
 
@@ -69,6 +78,42 @@ namespace LandFlipper.UI
             backButton.clicked -= OnBackClicked;
             cancelButton.clicked -= OnCancelClicked;
             SessionContext.MessagePosted -= OnSessionMessage;
+            logoJob?.Pause();
+        }
+
+        // ------------------------------------------------------------ animasyon
+
+        void AnimateLogo()
+        {
+            float t = Time.unscaledTime - introStartTime;
+            float drop = t < 0.7f ? 1f - EaseOutBack(t / 0.7f) : 0f;
+            float y = -70f * drop + Mathf.Sin(t * 1.3f) * 3f;
+            float angle = -4f + Mathf.Sin(t * 0.9f) * 1.2f;
+            logo.style.translate = new Translate(0f, y);
+            logo.style.rotate = new Rotate(angle);
+            logo.style.opacity = Mathf.Clamp01(t / 0.25f);
+        }
+
+        static float EaseOutBack(float x)
+        {
+            const float c1 = 1.70158f;
+            const float c3 = c1 + 1f;
+            x = Mathf.Clamp01(x) - 1f;
+            return 1f + c3 * x * x * x + c1 * x * x;
+        }
+
+        /// <summary>Panelin "mm-anim" öğeleri sırayla soldan kayarak gelir.</summary>
+        static void PlayEnter(VisualElement panel, int baseDelayMs)
+        {
+            var items = new System.Collections.Generic.List<VisualElement>();
+            if (panel.ClassListContains("mm-anim")) items.Add(panel);
+            panel.Query(className: "mm-anim").ForEach(e => { if (e != panel) items.Add(e); });
+            for (int i = 0; i < items.Count; i++)
+            {
+                var item = items[i];
+                item.AddToClassList("mm-enter");
+                item.schedule.Execute(() => item.RemoveFromClassList("mm-enter")).StartingIn(baseDelayMs + 70 * i);
+            }
         }
 
         void OnSettingsClicked() => SettingsController.Instance?.Open();
@@ -172,9 +217,11 @@ namespace LandFlipper.UI
 
         void ShowPanel(VisualElement panel)
         {
+            bool changed = panel.ClassListContains("hidden") || Time.unscaledTime - introStartTime < 0.1f;
             mainPanel.EnableInClassList("hidden", panel != mainPanel);
             coopPanel.EnableInClassList("hidden", panel != coopPanel);
             busyPanel.EnableInClassList("hidden", panel != busyPanel);
+            if (changed) PlayEnter(panel, panel == mainPanel && Time.unscaledTime - introStartTime < 0.1f ? 300 : 20);
         }
 
         void SetStatus(string message, bool isError = false)

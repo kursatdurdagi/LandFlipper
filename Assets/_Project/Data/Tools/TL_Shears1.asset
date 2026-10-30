@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf82630f8a010af4e96776f707abe041, type: 3}
+  m_Name: TL_Shears1
+  m_EditorClassIdentifier: Assembly-CSharp::LandFlipper.Gameplay.ToolDefinition
+  id: shears_tailor
+  kind: 0
+  tier: 1
+  displayName: "Terzi Makas\u0131"
+  description: "Uzun ve keskin a\u011F\u0131zlar; \xE7imi \xE7ok daha h\u0131zl\u0131
+    bi\xE7er."
+  iconText: M
+  price: 120
+  requiredLevel: 2
+  power: 1.8
+  visualPrefab: {fileID: 1579659713685866630, guid: 73b3731890c54884a9f574f7cf56ec1e, type: 3}
+  gripPositionOffset: {x: 0, y: 0, z: 0}
+  gripEulerOffset: {x: 0, y: 0, z: 0}

@@ -1,101 +1,68 @@
-/* Land Flipper - Yetenek ağacı (UI Toolkit) */
-
-.skill-overlay {
-    background-color: rgba(18, 24, 16, 0.72);
-}
+/* Land Flipper — Yetenekler: yeşil etiketli tombul kart, dal başına renkli sütun */
 
 .skill-panel {
-    width: 1320px;
+    width: 1180px;
     max-width: 94%;
-    max-height: 92%;
-    padding: 30px 34px 22px 34px;
-    border-radius: 22px;
-    background-color: rgb(244, 235, 217);
-    border-width: 3px;
-    border-color: rgb(217, 203, 176);
+    max-height: 90%;
+    padding: 50px 30px 20px 30px;
 }
 
-/* ---------- başlık ---------- */
+/* ---------------------------------------------------------------- başlık şeridi */
+
 .skill-header {
     flex-direction: row;
     align-items: center;
-    padding-bottom: 20px;
-    margin-bottom: 22px;
-    border-bottom-width: 2px;
-    border-color: rgb(217, 203, 176);
-}
-
-.skill-title-group {
-    flex-grow: 1;
-}
-
-.skill-title {
-    font-size: 40px;
-    -unity-font-style: bold;
-    color: rgb(59, 47, 37);
-    letter-spacing: 2px;
-}
-
-.skill-subtitle {
-    font-size: 16px;
-    color: rgb(122, 106, 88);
-    margin-top: 2px;
-}
-
-.skill-level-group {
-    flex-direction: row;
-    align-items: center;
-    margin-right: 26px;
+    padding: 10px 14px;
+    margin: 0 8px 22px 8px;
+    background-color: var(--cream-2);
+    border-radius: 18px;
 }
 
 .skill-level-badge {
-    width: 72px;
-    height: 72px;
-    border-radius: 36px;
+    width: 54px;
+    height: 54px;
+    border-radius: 27px;
     align-items: center;
     justify-content: center;
-    background-color: rgb(94, 140, 74);
-    border-width: 4px;
-    border-color: rgb(141, 186, 109);
-    margin-right: 14px;
-}
-
-.skill-level-caption {
-    font-size: 12px;
-    -unity-font-style: bold;
-    color: rgba(255, 253, 246, 0.8);
-    margin-bottom: -4px;
+    background-color: var(--sun);
+    border-width: 3px;
+    border-bottom-width: 5px;
+    border-color: var(--ink);
+    margin-right: 16px;
 }
 
 .skill-level-value {
-    font-size: 30px;
+    font-size: 24px;
     -unity-font-style: bold;
-    color: rgb(255, 253, 246);
+    color: var(--ink);
 }
 
 .skill-xp-group {
-    width: 240px;
+    flex-grow: 1;
+    margin-right: 20px;
 }
 
 .skill-xp-label {
-    font-size: 15px;
+    font-size: 14px;
     -unity-font-style: bold;
-    color: rgb(59, 47, 37);
-    margin-bottom: 6px;
+    color: var(--ink-soft);
+    margin: 0 0 6px 2px;
 }
 
 .xp-track {
-    height: 14px;
-    border-radius: 7px;
-    background-color: rgb(225, 212, 186);
+    height: 16px;
+    border-radius: 8px;
+    border-width: 2px;
+    border-color: var(--ink);
+    background-color: var(--cream);
     overflow: hidden;
 }
 
 .xp-fill {
     height: 100%;
     width: 0%;
-    border-radius: 7px;
-    background-color: rgb(240, 190, 60);
+    border-radius: 6px;
+    background-color: var(--leaf);
     transition-property: width;
     transition-duration: 0.3s;
 }
@@ -103,29 +70,39 @@
 .skill-points {
     flex-direction: row;
     align-items: center;
-    padding: 10px 18px;
+    padding: 4px 16px 6px 16px;
+    border-width: 2px;
+    border-bottom-width: 4px;
+    border-color: var(--ink);
     border-radius: 16px;
-    background-color: rgb(59, 47, 37);
+    background-color: var(--cream);
 }
 
 .skill-points.has-points {
-    background-color: rgb(196, 120, 40);
+    background-color: var(--tomato);
+    rotate: -3deg;
 }
 
 .skill-points-value {
-    font-size: 36px;
+    font-size: 26px;
     -unity-font-style: bold;
-    color: rgb(255, 230, 150);
-    margin-right: 10px;
+    color: var(--ink);
+    margin-right: 6px;
 }
 
 .skill-points-caption {
-    font-size: 12px;
+    font-size: 14px;
     -unity-font-style: bold;
-    color: rgba(255, 253, 246, 0.85);
+    color: var(--ink-soft);
 }
 
-/* ---------- dallar ---------- */
+.skill-points.has-points .skill-points-value,
+.skill-points.has-points .skill-points-caption {
+    color: var(--cream);
+}
+
+/* ---------------------------------------------------------------- dallar */
+
 .skill-branches {
     flex-direction: row;
     flex-grow: 1;
@@ -135,68 +112,70 @@
     flex-grow: 1;
     flex-basis: 0;
     margin: 0 8px;
-    padding: 14px;
-    border-radius: 16px;
-    background-color: rgb(235, 223, 198);
 }
 
 .skill-branch-header {
     flex-direction: row;
     align-items: center;
-    margin-bottom: 14px;
+    margin: 0 0 12px 4px;
 }
 
 .skill-branch-dot {
     width: 14px;
     height: 14px;
     border-radius: 7px;
+    border-width: 2px;
+    border-color: var(--ink);
     margin-right: 8px;
 }
 
 .skill-branch-name {
-    font-size: 18px;
+    font-size: 15px;
     -unity-font-style: bold;
-    color: rgb(59, 47, 37);
-    letter-spacing: 1px;
+    color: var(--ink);
 }
 
 .skill-connector {
     width: 4px;
     height: 16px;
-    align-self: center;
-    background-color: rgb(205, 189, 160);
+    margin-left: 34px;
+    border-radius: 2px;
+    background-color: var(--cream-3);
 }
 
 .skill-connector.active {
-    background-color: rgb(94, 140, 74);
+    background-color: var(--leaf);
 }
 
-/* ---------- kart ---------- */
+/* ---------------------------------------------------------------- kart */
+
 .skill-card {
     padding: 14px;
-    border-radius: 14px;
-    background-color: rgb(255, 251, 242);
+    background-color: #FFFDF7;
     border-width: 2px;
-    border-color: rgb(217, 203, 176);
-    transition-duration: 0.12s;
+    border-bottom-width: 5px;
+    border-color: var(--ink);
+    border-radius: 18px;
+    transition-property: translate, rotate;
+    transition-duration: 0.15s;
+    transition-timing-function: ease-out-back;
 }
 
 .skill-card:hover {
-    border-color: rgb(196, 160, 110);
-    translate: 0 -2px;
+    translate: 0 -3px;
+    rotate: -0.6deg;
 }
 
 .skill-card.locked {
-    opacity: 0.55;
-}
-
-.skill-card.maxed {
-    border-color: rgb(141, 186, 109);
-    background-color: rgb(240, 248, 230);
+    opacity: 0.5;
 }
 
 .skill-card.affordable {
-    border-color: rgb(240, 190, 60);
+    background-color: var(--sun-soft);
+}
+
+.skill-card.maxed {
+    background-color: var(--leaf-soft);
 }
 
 .skill-card-top {
@@ -205,18 +184,24 @@
 }
 
 .skill-icon {
-    width: 46px;
-    height: 46px;
+    width: 40px;
+    height: 40px;
     border-radius: 12px;
+    border-width: 2px;
+    border-bottom-width: 4px;
+    border-color: var(--ink);
     align-items: center;
     justify-content: center;
     margin-right: 12px;
+    rotate: -4deg;
 }
 
 .skill-icon-text {
-    font-size: 22px;
+    font-size: 18px;
     -unity-font-style: bold;
-    color: rgb(255, 253, 246);
+    color: var(--cream);
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: var(--ink);
 }
 
 .skill-name-group {
@@ -224,89 +209,104 @@
 }
 
 .skill-name {
-    font-size: 18px;
+    font-size: 17px;
     -unity-font-style: bold;
-    color: rgb(59, 47, 37);
+    color: var(--ink);
 }
 
 .skill-pips {
     flex-direction: row;
-    margin-top: 5px;
+    margin-top: 6px;
 }
 
 .skill-pip {
-    width: 16px;
-    height: 7px;
-    border-radius: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 6px;
+    border-width: 2px;
+    border-color: var(--ink);
     margin-right: 4px;
-    background-color: rgb(225, 212, 186);
+    background-color: var(--cream);
 }
 
 .skill-pip.filled {
-    background-color: rgb(94, 140, 74);
+    background-color: var(--leaf);
 }
 
 .skill-desc {
     font-size: 14px;
-    color: rgb(122, 106, 88);
+    color: var(--ink-soft);
     white-space: normal;
     margin-top: 10px;
 }
 
 .skill-effect {
-    font-size: 14px;
+    font-size: 13px;
     -unity-font-style: bold;
-    color: rgb(94, 140, 74);
+    color: var(--leaf-lip);
     white-space: normal;
     margin-top: 6px;
 }
 
 .skill-button {
-    height: 38px;
+    height: 40px;
     margin: 12px 0 0 0;
     font-size: 15px;
     -unity-font-style: bold;
-    border-radius: 10px;
-    border-width: 0;
-    background-color: rgb(94, 140, 74);
-    color: rgb(255, 253, 246);
+    border-width: 2px;
+    border-bottom-width: 5px;
+    border-color: var(--ink);
+    border-radius: 12px;
+    background-color: var(--leaf);
+    color: var(--cream);
+    transition-property: translate, border-bottom-width;
     transition-duration: 0.1s;
 }
 
 .skill-button:hover {
-    background-color: rgb(111, 161, 87);
+    translate: 0 -1px;
 }
 
 .skill-button:active {
-    scale: 0.97 0.97;
+    translate: 0 2px;
+    border-bottom-width: 2px;
 }
 
 .skill-button:disabled {
-    background-color: rgb(205, 189, 160);
-    color: rgb(122, 106, 88);
+    background-color: var(--cream-2);
+    color: var(--muted);
+    border-color: var(--cream-3);
     opacity: 1;
 }
 
 /* dal renkleri */
-.branch-carry { background-color: rgb(214, 132, 62); }
-.branch-move { background-color: rgb(76, 140, 196); }
-.branch-gather { background-color: rgb(94, 140, 74); }
-.branch-yield { background-color: rgb(212, 166, 40); }
+.branch-carry { background-color: var(--wood); }
+.branch-move { background-color: var(--sky); }
+.branch-gather { background-color: var(--leaf); }
+.branch-yield { background-color: var(--sun); }
 
-/* ---------- alt bilgi ---------- */
+/* ---------------------------------------------------------------- alt */
+
 .skill-footer {
     flex-direction: row;
     justify-content: space-between;
-    margin-top: 18px;
+    align-items: center;
+    margin: 18px 8px 0 8px;
 }
 
 .skill-footer-text {
     font-size: 14px;
-    color: rgb(122, 106, 88);
+    color: var(--ink-soft);
 }
 
 .skill-footer-key {
-    font-size: 14px;
+    padding: 2px 10px 4px 10px;
+    font-size: 13px;
     -unity-font-style: bold;
-    color: rgb(59, 47, 37);
+    color: var(--ink);
+    border-width: 2px;
+    border-bottom-width: 4px;
+    border-color: var(--ink);
+    border-radius: 8px;
+    background-color: var(--cream);
 }

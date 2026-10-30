@@ -1,0 +1,28 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="../Styles/Common.uss" />
+    <Style src="Workbench.uss" />
+    <ui:VisualElement name="bench-overlay" class="screen scrim bench-overlay hidden">
+        <ui:VisualElement name="bench-panel" class="sheet bench-panel">
+            <ui:VisualElement class="sticker sun bench-sticker"><ui:Label text="Alet Tezgâhı" /></ui:VisualElement>
+
+            <!-- sağ üstte seviye ve bütçe hapları -->
+            <ui:VisualElement class="bench-meta">
+                <ui:VisualElement class="bench-pill">
+                    <ui:Label text="Sv" class="bench-pill-caption" />
+                    <ui:Label name="bench-level" text="1" class="bench-pill-value" />
+                </ui:VisualElement>
+                <ui:VisualElement class="bench-pill bench-pill-money">
+                    <ui:VisualElement class="bench-coin" />
+                    <ui:Label name="bench-money" text="0 TL" class="bench-pill-value" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:VisualElement name="bench-cards" class="bench-cards" />
+
+            <ui:VisualElement class="bench-footer">
+                <ui:Label name="bench-hint" text="" class="bench-footer-text" />
+                <ui:Button name="bench-close" text="Tamam" class="lf-button bench-close" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
