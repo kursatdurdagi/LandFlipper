@@ -50,6 +50,7 @@ namespace LandFlipper.EditorTools
             Textured(k.Wood, wood);
             Textured(k.WoodDark, woodDark);
             Textured(k.Roof, shingle);
+            TexturePropMaterials(k.Sign, k.AwningRed, k.AwningCream, k.Crate, k.Delivery);
             Textured(k.Grass, ground);
             Textured(k.OuterGrass, groundOuter);
 
@@ -260,10 +261,11 @@ namespace LandFlipper.EditorTools
         /// Pahlı (bevel), hafif eğri, ucu yamuk kesilmiş tahta. Damar (doku u ekseni) en uzun eksen boyuncadır.
         /// Aynı boy + varyant mesh paylaşır ve asset olarak kaydedilir.
         /// </summary>
-        public static Mesh Board(Vector3 size, int variant, float tiling, string prefix)
+        public static Mesh Board(Vector3 size, int variant, float tiling, string prefix, float wobble = 1f)
         {
             int cx = Mathf.RoundToInt(size.x * 100f), cy = Mathf.RoundToInt(size.y * 100f), cz = Mathf.RoundToInt(size.z * 100f);
-            string key = $"{prefix}_{cx}x{cy}x{cz}_{variant}";
+            int w = Mathf.RoundToInt(wobble * 10f);
+            string key = w == 10 ? $"{prefix}_{cx}x{cy}x{cz}_{variant}" : $"{prefix}_{cx}x{cy}x{cz}_{variant}_w{w}";
             if (boardCache.TryGetValue(key, out var cached) && cached != null) return cached;
 
             var pb = ShapeGenerator.GenerateCube(PivotLocation.Center, size);
@@ -283,8 +285,8 @@ namespace LandFlipper.EditorTools
             if (ta == la) ta = (la + 1) % 3;
             int wa = 3 - la - ta;                                                            // genişlik
             var rng = new System.Random(variant * 977 + cx * 31 + cy * 17 + cz * 7);
-            float bow = size[la] * 0.012f * ((float)rng.NextDouble() * 2f - 1f);
-            float slope = ((float)rng.NextDouble() * 2f - 1f) * 0.16f;
+            float bow = size[la] * 0.012f * ((float)rng.NextDouble() * 2f - 1f) * wobble;
+            float slope = ((float)rng.NextDouble() * 2f - 1f) * 0.16f * wobble;
             float half = size[la] * 0.5f;
             var mesh = Bake(pb, p =>
             {
@@ -337,6 +339,73 @@ namespace LandFlipper.EditorTools
             result.RecalculateBounds();
             UnityEngine.Object.DestroyImmediate(mesh);
             return result;
+        }
+
+        static readonly Dictionary<string, Mesh> roundCache = new Dictionary<string, Mesh>();
+
+        /// <summary>Hafif göbekli fıçı: taban orijinde, yarıçap 1, yükseklik 1. Yan = submesh 0 (tahta), üst = 1 (kesik).</summary>
+        public static Mesh Barrel()
+        {
+            if (roundCache.TryGetValue("Barrel", out var m) && m != null) return m;
+            var pb = ShapeGenerator.GenerateCylinder(PivotLocation.Center, 16, 1f, 1f, 4, -1);
+            MarkCaps(pb, Vector3.up, 1);
+            MarkCaps(pb, Vector3.down, 1);
+            var mesh = Bake(pb, p =>
+            {
+                var c = new Vector3(p.x, p.y + 0.5f, p.z);
+                float b = 0.9f + Mathf.Sin(Mathf.Clamp01(c.y) * Mathf.PI) * 0.1f;
+                return new Vector3(c.x * b, c.y, c.z * b);
+            }, 1);
+            m = LowPolyWorldBuilder.SaveMesh(Finish(mesh, CylinderUV, 1.6f, "SBarrel"), "SBarrel");
+            roundCache["Barrel"] = m;
+            return m;
+        }
+
+        /// <summary>Yuvarlak, kenarı yumuşak disk/plaka: taban orijinde, yarıçap 1, yükseklik 1. Yan = submesh 0, üst = 1.</summary>
+        public static Mesh RoundSlab()
+        {
+            if (roundCache.TryGetValue("Slab", out var m) && m != null) return m;
+            var pb = ShapeGenerator.GenerateCylinder(PivotLocation.Center, 28, 1f, 1f, 1, -1);
+            MarkCaps(pb, Vector3.up, 1);
+            MarkCaps(pb, Vector3.down, 1);
+            var mesh = Bake(pb, p => new Vector3(p.x, p.y + 0.5f, p.z), 1);
+            m = LowPolyWorldBuilder.SaveMesh(Finish(mesh, CylinderUV, 1f, "SRoundSlab"), "SRoundSlab");
+            roundCache["Slab"] = m;
+            return m;
+        }
+
+        /// <summary>Tabela, tente ve teslim alanı malzemelerine doku verir.</summary>
+        public static void TexturePropMaterials(Material sign, Material awningRed, Material awningCream, Material crate, Material delivery)
+        {
+            var canvas = Paint("T_Canvas", CanvasPattern);
+            Textured(sign, Paint("T_SignBoard", (u, v) => WoodPattern(u, v, new Color(0.96f, 0.90f, 0.76f)) * 0.5f + new Color(0.96f, 0.91f, 0.79f) * 0.5f));
+            Textured(awningRed, canvas, new Color(0.88f, 0.36f, 0.30f));
+            Textured(awningCream, canvas, new Color(0.98f, 0.94f, 0.84f));
+            Textured(crate, Paint("T_Wood", (u, v) => WoodPattern(u, v, new Color(0.80f, 0.60f, 0.40f))), new Color(1.05f, 0.98f, 0.9f));
+            Textured(delivery, Paint("T_Pad", PadPattern));
+        }
+
+        static Color CanvasPattern(float u, float v)
+        {
+            float weave = (Mathf.Sin(u * Mathf.PI * 2f * 96f) * Mathf.Sin(v * Mathf.PI * 2f * 96f)) * 0.5f + 0.5f;
+            float n = Fbm(u, v, 4, 3, 101);
+            float c = 0.93f + weave * 0.05f + (n - 0.5f) * 0.08f;
+            c -= Dabs(u, v, 6, 103, 0.35f) * 0.05f;      // hafif solmuş lekeler
+            return new Color(c, c, c);
+        }
+
+        /// <summary>Teslim alanı (disk üstü, uv 0..1 = çap): sarı boya, kenarda krem halka, fırça izi.</summary>
+        static Color PadPattern(float u, float v)
+        {
+            float dx = u - 0.5f, dy = v - 0.5f;
+            float r = Mathf.Sqrt(dx * dx + dy * dy) * 2f;
+            Color c = Color.Lerp(new Color(0.95f, 0.74f, 0.27f), new Color(0.99f, 0.82f, 0.36f), Fbm(u, v, 4, 3, 111));
+            c = Color.Lerp(c, c * 0.9f, Dabs(u, v, 10, 113, 0.3f) * 0.4f);
+            float ring = Smooth(0.74f, 0.77f, r) * (1f - Smooth(0.84f, 0.87f, r));
+            c = Color.Lerp(c, new Color(1f, 0.95f, 0.82f), ring * 0.9f);
+            float inner = Smooth(0.30f, 0.32f, r) * (1f - Smooth(0.36f, 0.38f, r));
+            c = Color.Lerp(c, new Color(1f, 0.95f, 0.82f), inner * 0.7f);
+            return c;
         }
 
         static void MarkCaps(ProBuilderMesh pb, Vector3 direction, int submesh)
